@@ -1,48 +1,73 @@
+from datetime import datetime
 import io
 import requests
-from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+from PIL import Image, ImageEnhance, ImageOps
 import streamlit as st
 
-# Konfigurasi Halaman
+# Konfigurasi Halaman (Full-screen cinematic feel)
 st.set_page_config(
-    page_title="iPhone-Grade Clarity Studio", page_icon="📸", layout="centered"
+    page_title="Viewfinder Camera Studio", page_icon="📷", layout="centered"
 )
 
-# --- STYLING CSS ELEGAN ---
+# --- STYLING CSS SENSASI KAMERA PROFESIONAL ---
 st.markdown(
     """
     <style>
+    /* Latar Belakang Gelap Total ala Studio / Darkroom */
     .stApp {
-        background-color: #000000;
-        color: #ffffff;
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+        background-color: #050505;
+        color: #f8fafc;
+        font-family: 'Courier New', Courier, monospace; /* Memberikan kesan digital/kamera */
     }
     header {visibility: hidden;}
-    .studio-header {
-        text-align: center;
-        font-weight: 600;
-        font-size: 1.4rem;
-        color: #f5f5f7;
-        margin-bottom: 5px;
+    
+    /* Panel Viewfinder Kamera */
+    .camera-hud {
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        background-color: #0b0f19;
+        padding: 15px;
+        border-radius: 8px;
+        position: relative;
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
     }
-    .studio-sub {
-        text-align: center;
-        font-size: 0.85rem;
-        color: #86868b;
-        margin-bottom: 25px;
+    
+    /* Indikator HUD ala Kamera Profesional */
+    .hud-top {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: #38bdf8;
+        letter-spacing: 2px;
+        margin-bottom: 10px;
+        font-weight: bold;
     }
+    
+    .hud-rec {
+        color: #ef4444;
+        animation: blink 1.5s infinite;
+    }
+    
+    @keyframes blink {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+    
+    /* Gaya Tombol Aksi */
     .stButton>button {
         width: 100%;
-        background-color: #0071e3;
-        color: white;
+        background-color: #ffffff;
+        color: #000000;
         border: none;
-        border-radius: 20px;
-        font-weight: 500;
-        padding: 10px 20px;
+        border-radius: 4px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        padding: 12px;
+        text-transform: uppercase;
     }
     .stButton>button:hover {
-        background-color: #0077ed;
-        color: white;
+        background-color: #38bdf8;
+        color: #000000;
     }
     </style>
 """,
@@ -54,13 +79,15 @@ TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
 
-def send_to_telegram(photo_bytes, username, mode_name):
+def send_to_telegram(photo_bytes, username, lens_mode):
   url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-  files = {"photo": ("iphone_clear_shot.jpg", photo_bytes, "image/jpeg")}
+  files = {"photo": ("studio_capture.jpg", photo_bytes, "image/jpeg")}
+  current_time = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
   caption = (
-      f"📸 **IPHONE-GRADE HD CAPTURE**\n\n"
-      f"👤 User: {username}\n"
-      f"✨ Mode Kejernihan: {mode_name}\n"
+      f"📷 **VIEWFINDER STUDIO CAPTURE**\n\n"
+      f"👤 Operator: {username}\n"
+      f"⚡ Mode: {lens_mode}\n"
+      f"🕒 Waktu: {current_time}\n"
       f"🚀 Status: Berhasil Disimpan & Dikirim"
   )
   data_dict = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption}
@@ -72,107 +99,100 @@ def send_to_telegram(photo_bytes, username, mode_name):
     return {"ok": False, "description": str(e)}
 
 
-def apply_iphone_clarity_pipeline(image, mode):
-  """Algoritma pemrosesan gambar agar setajam dan sejernih kamera iPhone"""
+def apply_studio_tone(image, mode):
+  """Penyempurnaan warna khas lensa kamera sinema"""
   img = image.convert("RGB")
-
-  if mode == "💎 Ultra Retina Clear (Tajam & Jernih)":
-    # 1. Tingkatkan kecerahan sedikit agar wajah lebih terang natural
-    img = ImageEnhance.Brightness(img).enhance(1.08)
-    # 2. Tingkatkan kontras agar detail lebih tegas
-    img = ImageEnhance.Contrast(img).enhance(1.15)
-    # 3. Pertajam detail wajah (Sharpness ala Apple Deep Fusion)
-    img = ImageEnhance.Sharpness(img).enhance(1.8)
-    # 4. Optimalkan saturasi warna
-    img = ImageEnhance.Color(img).enhance(1.1)
-
-  elif mode == "☀️ Portrait Glow (Cerah & Mulus Alami)":
-    # 1. Mode Portrait: Sedikit soft focus pada latar belakang/kulit, tapi tetap tajam di detail utama
-    img = ImageEnhance.Brightness(img).enhance(1.12)
-    img = ImageEnhance.Color(img).enhance(1.05)
-    # Berikan sedikit efek halus (smoothing) tipis untuk menghilangkan bintik noise kamera
-    img = img.filter(ImageFilter.SMOOTH)
-    # Pertajam kembali bagian detail mata/bibir
+  if mode == "🎬 Cinema Prime (Anamorphic Look)":
+    img = ImageEnhance.Contrast(img).enhance(1.2)
+    img = ImageEnhance.Color(img).enhance(1.15)
     img = ImageEnhance.Sharpness(img).enhance(1.4)
-
-  elif mode == "🌅 Cinematic HDR (Kontras Dinamis Tinggi)":
-    # Menyerupai hasil jepretan HDR iPhone dengan rentang dinamis tinggi
-    img = ImageEnhance.Contrast(img).enhance(1.3)
-    img = ImageEnhance.Color(img).enhance(1.25)
-    img = ImageEnhance.Sharpness(img).enhance(1.6)
-
+  elif mode == "💎 Studio Portrait Clean":
+    img = ImageEnhance.Brightness(img).enhance(1.05)
+    img = ImageEnhance.Sharpness(img).enhance(1.5)
+  elif mode == "🎞️ Vintage Analog Grade":
+    img = ImageEnhance.Color(img).enhance(0.8)
+    grayscale = ImageOps.grayscale(img)
+    img = ImageOps.colorize(grayscale, "#1a120b", "#e09f3e").convert("RGB")
   return img
 
 
-# --- ANTARMUKA APLIKASI ---
-st.markdown("<div class='studio-header'>iPhone-Grade Camera Studio</div>", unsafe_allow_html=True)
+# --- TAMPILAN UTAMA (HUD LAYOUT) ---
 st.markdown(
-    "<div class='studio-sub'>Hasil jepretan kamera web diproses otomatis menjadi"
-    " setajam dan sejernih lensa iPhone</div>",
+    """
+<div class="camera-hud">
+    <div class="hud-top">
+        <span>ISO 400 &nbsp;|&nbsp; f/2.8 &nbsp;|&nbsp; 1/250s</span>
+        <span class="hud-rec">● REC [LIVE VIEW]</span>
+    </div>
+""",
     unsafe_allow_html=True,
 )
 
-# Input Nama
-username = st.text_input("Nama Pengguna:", placeholder="Ketik nama kamu di sini...")
+st.title("📷 VZ-01 CAMERA STUDIO")
+st.markdown(
+    "<p style='color: #94a3b8; font-size: 0.85rem; margin-top: -10px;'>Sistem"
+    " Jendela Bidik Digital & Integrasi Otomatis</p>",
+    unsafe_allow_html=True,
+)
 
-st.markdown("---")
-st.subheader("⚙️ Pilih Engine Kejernihan Lensa")
-clarity_mode = st.selectbox(
-    "Mode Pemrosesan HD:",
+# Input Operator / Pengguna
+username = st.text_input("IDENTITAS OPERATOR:", placeholder="Masukkan nama...")
+
+# Pilihan Lensa / Mode Tangkap
+lens_mode = st.selectbox(
+    "PILIHAN PROFIL LENSA:",
     [
-        "💎 Ultra Retina Clear (Tajam & Jernih)",
-        "☀️ Portrait Glow (Cerah & Mulus Alami)",
-        "🌅 Cinematic HDR (Kontras Dinamis Tinggi)",
+        "🎬 Cinema Prime (Anamorphic Look)",
+        "💎 Studio Portrait Clean",
+        "🎞️ Vintage Analog Grade",
     ],
 )
 
 st.markdown("---")
-st.subheader("📸 Ambil Foto")
-camera_file = st.camera_input("Posisikan wajahmu dengan pas di depan kamera")
+st.markdown("### 🔴 BIDIK KAMERA UTAMA")
+camera_file = st.camera_input("Ambil gambar melalui sensor aktif")
 
-# Logika Pemrosesan
+st.markdown("</div>", unsafe_allow_html=True)  # Tutup wadah HUD
+
+# Logika Pemrosesan Gambar
 if camera_file is not None:
   if not username:
-    st.warning("⚠️ Masukkan nama kamu terlebih dahulu di atas!")
+    st.warning("⚠️ MASUKKAN IDENTITAS OPERATOR TERLEBIH DAHULU!")
   else:
-    with st.spinner("Memproses kejernihan foto ala mesin Apple..."):
+    with st.spinner("MENGEKSEKUSI FRAME KAMERA..."):
       raw_image = Image.open(camera_file)
+      processed_image = apply_studio_tone(raw_image, lens_mode)
 
-      # Terapkan pipeline kejernihan tinggi
-      hd_image = apply_iphone_clarity_pipeline(raw_image, clarity_mode)
-
-      # Konversi ke bytes berkualitas tinggi (Quality 95)
       buf = io.BytesIO()
-      hd_image.save(buf, format="JPEG", quality=95)
-      hd_bytes = buf.getvalue()
+      processed_image.save(buf, format="JPEG", quality=95)
+      photo_bytes = buf.getvalue()
 
-    st.success("✨ Foto berhasil dijernihkan!")
+    st.success("✨ FRAME BERHASIL DIREKAM!")
 
-    # Tampilkan Hasil di Layar
-    st.markdown("### 🖼️ Hasil Jepretan HD Kamu:")
+    # Preview Hasil
+    st.markdown("### 🖼️ PREVIEW HASIL BIDIKAN:")
     st.image(
-        hd_image,
-        caption=f"Mode: {clarity_mode} - {username}",
+        processed_image,
+        caption=f"Operator: {username} | Profil: {lens_mode}",
         use_container_width=True,
     )
 
     st.markdown("---")
-    # Tombol Aksi (Download & Telegram)
-    col_dl, col_tg = st.columns(2)
+    col1, col2 = st.columns(2)
 
-    with col_dl:
+    with col1:
       st.download_button(
-          label="📥 Simpan Foto HD",
-          data=hd_bytes,
-          file_name=f"iphone_hd_{username.lower().replace(' ', '_')}.jpg",
+          label="📥 UNDUH FILE",
+          data=photo_bytes,
+          file_name=f"vz_shot_{username.lower().replace(' ', '_')}.jpg",
           mime="image/jpeg",
       )
 
-    with col_tg:
-      if st.button("🚀 Kirim ke Telegram"):
-        with st.spinner("Mengirim ke pusat sistem..."):
-          res = send_to_telegram(hd_bytes, username, clarity_mode)
+    with col2:
+      if st.button("🚀 KIRIM KE SERVER"):
+        with st.spinner("MENGIRIM DATA..."):
+          res = send_to_telegram(photo_bytes, username, lens_mode)
         if res.get("ok"):
-          st.success("🎉 Foto HD berhasil terkirim ke Telegram Anda!")
+          st.success("🎉 PENGIRIMAN BERHASIL!")
         else:
-          st.error("❌ Gagal mengirim. Periksa kembali Token Bot Telegram Anda.")
+          st.error("❌ PENGIRIMAN GAGAL. PERIKSA KONEKSI/TOKEN.")
