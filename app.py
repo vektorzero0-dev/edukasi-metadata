@@ -10,7 +10,7 @@ st.set_page_config(
 TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
-# --- KODE HTML, CSS & JAVASCRIPT (FIXED LAYOUT & TEXT CUTTING) ---
+# --- KODE HTML, CSS & JAVASCRIPT (FIXED BOTTOM BUTTONS) ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="id">
@@ -35,13 +35,13 @@ html_code = f"""
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            min-height: 100vh;
-            padding: 8px;
+            width: 100%;
+            padding: 4px;
         }}
 
         .container {{
             width: 100%;
-            max-width: 460px; /* Diperluas agar muat di layar sempit */
+            max-width: 440px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -49,30 +49,28 @@ html_code = f"""
 
         .header {{
             text-align: center;
-            margin-bottom: 8px;
-            width: 100%;
+            margin-bottom: 6px;
         }}
         .header h1 {{
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: #f1f5f9;
-            white-space: nowrap;
         }}
         .header p {{
-            font-size: 0.68rem;
+            font-size: 0.65rem;
             color: #94a3b8;
-            margin-top: 2px;
+            margin-top: 1px;
         }}
 
-        /* Kotak Viewfinder Kamera */
+        /* Kotak Viewfinder Kamera yang Lebih Ringkas */
         .camera-box {{
             position: relative;
             width: 100%;
-            aspect-ratio: 4/5; /* Rasio lebih proporsional untuk HP */
+            aspect-ratio: 4/5;
             background: #111;
-            border-radius: 20px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.8);
             border: 1px solid rgba(255, 255, 255, 0.12);
         }}
 
@@ -100,14 +98,14 @@ html_code = f"""
         /* Pilihan Engine / Filter */
         .filter-container {{
             width: 100%;
-            margin-top: 8px;
+            margin-top: 6px;
         }}
         .filter-label {{
-            font-size: 0.62rem;
+            font-size: 0.6rem;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.8px;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             font-weight: 700;
         }}
         .filter-selector {{
@@ -115,7 +113,7 @@ html_code = f"""
             gap: 6px;
             width: 100%;
             overflow-x: auto;
-            padding: 2px 2px 6px 2px;
+            padding: 2px 2px 4px 2px;
             scrollbar-width: none;
         }}
         .filter-selector::-webkit-scrollbar {{ display: none; }}
@@ -124,13 +122,12 @@ html_code = f"""
             background: #161b22;
             border: 1px solid #30363d;
             color: #8b949e;
-            padding: 7px 12px;
-            border-radius: 12px;
-            font-size: 0.72rem;
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-size: 0.7rem;
             font-weight: 600;
             white-space: nowrap;
             cursor: pointer;
-            transition: all 0.2s ease;
         }}
         .filter-btn.active {{
             background: #ffffff;
@@ -142,16 +139,16 @@ html_code = f"""
         /* Input Nama */
         .input-group {{
             width: 100%;
-            margin-top: 8px;
+            margin-top: 6px;
         }}
         .input-group input {{
             width: 100%;
-            padding: 10px 14px;
+            padding: 9px 12px;
             background: #111622;
             border: 1px solid #2a3447;
-            border-radius: 12px;
+            border-radius: 10px;
             color: #fff;
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             outline: none;
         }}
         .input-group input:focus {{ border-color: #3b82f6; }}
@@ -159,30 +156,30 @@ html_code = f"""
         /* Tombol Aksi */
         .action-area {{
             display: flex;
-            gap: 8px;
+            gap: 6px;
             width: 100%;
-            margin-top: 8px;
+            margin-top: 6px;
         }}
         .btn {{
             flex: 1;
-            padding: 11px;
+            padding: 10px;
             border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             font-weight: 700;
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             cursor: pointer;
             text-align: center;
         }}
         .btn-capture {{ background: #ffffff; color: #000000; }}
-        .btn-retake {{ background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; display: none; }}
-        .btn-download {{ background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80; display: none; }}
+        .btn-retake {{ background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; display: none; }}
+        .btn-download {{ background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.4); color: #4ade80; display: none; }}
 
         .status-msg {{
-            margin-top: 6px;
-            font-size: 0.72rem;
+            margin-top: 4px;
+            font-size: 0.7rem;
             text-align: center;
             color: #38bdf8;
-            min-height: 18px;
+            min-height: 16px;
             font-weight: 500;
         }}
         
@@ -360,5 +357,5 @@ html_code = f"""
 </html>
 """
 
-# Render komponen interaktif dengan tinggi iframe yang disesuaikan agar tidak terpotong
-components.html(html_code, height=660)
+# Render komponen dengan tinggi iframe diperbesar menjadi 780px agar tidak terpotong
+components.html(html_code, height=780)
