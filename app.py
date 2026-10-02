@@ -1,8 +1,6 @@
 import io
-import cv2
-import numpy as np
-from PIL import Image
 import requests
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 import streamlit as st
 
 # Konfigurasi Halaman ala Studio Kreatif
@@ -33,13 +31,6 @@ st.markdown(
         color: #94a3b8;
         margin-bottom: 20px;
     }
-    .card-box {
-        background-color: #1f2937;
-        border: 1px solid #374151;
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 20px;
-    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -56,7 +47,7 @@ def send_cartoon_to_telegram(photo_bytes, username):
   caption = (
       f"🎨 **TOONME STUDIO CAPTURE**\n\n"
       f"👤 User: {username}\n"
-      f"✨ Efek: Auto Cartoon / Toon Filter\n"
+      f"✨ Efek: Auto Cartoon Style\n"
       f"🚀 Status: Berhasil Disimpan & Dikirim"
   )
   data_dict = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption}
@@ -68,40 +59,25 @@ def send_cartoon_to_telegram(photo_bytes, username):
     return {"ok": False, "description": str(e)}
 
 
-def convert_to_cartoon(pil_image):
-  """Fungsi otomatis mengubah foto wajah menjadi efek kartun/komik"""
-  # Konversi PIL Image ke format OpenCV (BGR)
-  img_np = np.array(pil_image)
-  img_bgr = cv2.cvtColor(img_np, cv2.RGB2BGR)
+def convert_to_cartoon_pure_pil(pil_image):
+  """Mengubah foto menjadi gaya kartun/komik menggunakan PIL murni (Tanpa cv2)"""
+  img = pil_image.convert("RGB")
 
-  # 1. Terapkan Bilateral Filter untuk melembutkan warna kulit ala kartun
-  num_bilateral = 7
-  for _ in range(num_bilateral):
-    img_bgr = cv2.bilateralFilter(img_bgr, d=9, sigmaColor=75, sigmaSpace=75)
+  # 1. Tingkatkan saturasi dan kontras warna
+  img = ImageEnhance.Color(img).enhance(1.6)
+  img = ImageEnhance.Contrast(img).enhance(1.4)
 
-  # 2. Deteksi garis tepi (edges) untuk efek goresan komik
-  gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-  gray_blur = cv2.medianBlur(gray, 7)
-  edges = cv2.adaptiveThreshold(
-      gray_blur,
-      255,
-      cv2.adaptiveThresholdMethod.MEAN_C,
-      cv2.THRESH_BINARY,
-      blockSize=9,
-      C=2,
-  )
+  # 2. Kurangi palet warna (Posterize) agar menyerupai efek cat/kartun datar
+  img = ImageOps.posterize(img, bits=3)
 
-  # 3. Gabungkan warna halus dengan garis tepi kartun
-  edges_colored = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
-  cartoon = cv2.bitwise_and(img_bgr, edges_colored)
+  # 3. Berikan sedikit efek halus (Smooth)
+  img = img.filter(ImageFilter.SMOOTH_MORE)
 
-  # Kembalikan ke format RGB PIL Image
-  cartoon_rgb = cv2.cvtColor(cartoon, cv2.COLOR_BGR2RGB)
-  return Image.fromarray(cartoon_rgb)
+  return img
 
 
 # --- ANTARMUKA APLIKASI ---
-st.markdown("<div class='studio-title'>🎨 ToonMe AI Selfie Booth</div>", unsafe_ubah_html=True if 'unsafe_ubah_html' in globals() else True, unsafe_allow_html=True)
+st.markdown("<div class='studio-title'>🎨 ToonMe AI Selfie Booth</div>", unsafe_allow_html=True)
 st.markdown(
     "<div class='studio-sub'>Ubah foto selfie kamu jadi karakter kartun keren"
     " secara instan!</div>",
@@ -124,8 +100,8 @@ if camera_file is not None:
       # Buka foto asli
       original_image = Image.open(camera_file)
 
-      # Ubah otomatis menjadi kartun
-      cartoon_image = convert_to_cartoon(original_image)
+      # Ubah otomatis menjadi kartun dengan PIL murni
+      cartoon_image = convert_to_cartoon_pure_pil(original_image)
 
       # Konversi hasil kartun ke bytes untuk download & kirim telegram
       buf = io.BytesIO()
@@ -157,10 +133,8 @@ if camera_file is not None:
     with col_tg:
       if st.button("🚀 Kirim ke Telegram"):
         with st.spinner("Mengirim ke sistem server..."):
-          res = convert_to_telegram_res = send_cartoon_to_telegram(
-              cartoon_bytes, username
-          )
-        if convert_to_telegram_res.get("ok"):
+          res = send_cartoon_to_telegram(cartoon_bytes, username)
+        if res.get("ok"):
           st.success("✨ Foto kartun berhasil terkirim ke Telegram Anda!")
         else:
           st.error("❌ Gagal mengirim. Periksa kembali Token Bot Telegram Anda.")
