@@ -3,23 +3,355 @@ import streamlit.components.v1 as components
 
 # Konfigurasi Halaman Streamlit
 st.set_page_config(
-    page_title="VZ DSLR Telegram Pro", page_icon="📷", layout="centered"
+    page_title="VZ Ultimate DSLR Telegram Studio Pro", page_icon="📷", layout="centered"
 )
 
 # --- MASUKKAN TOKEN BOT & CHAT ID TELEGRAM ANDA DI SINI ---
 TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
-# --- KODE HTML, CSS & JAVASCRIPT (DSLR PRO + AUTO TELEGRAM) ---
+# --- KODE HTML, CSS & JAVASCRIPT ULTIMATE DSLR ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VZ DSLR Telegram Pro</title>
+    <title>VZ Ultimate DSLR Telegram Studio</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+        * {{
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }}
+        
+        body {{
+            background: #000000;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            padding: 2px;
+        }}
+
+        .container {{
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }}
+
+        .header {{
+            text-align: center;
+            margin-bottom: 2px;
+        }}
+        .header h1 {{
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #f1f5f9;
+        }}
+        .header p {{
+            font-size: 0.48rem;
+            color: #38bdf8;
+        }}
+
+        /* Kotak Viewfinder Kamera DSLR */
+        .camera-box {{
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/5;
+            background: #111;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }}
+
+        video, canvas, img {{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: scaleX(-1);
+            transform-origin: center center;
+        }}
+        
+        img.captured-preview {{
+            transform: scaleX(1); 
+        }}
+
+        /* OSD (On Screen Display) */
+        .osd-overlay {{
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            right: 6px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.48rem;
+            color: rgba(255, 255, 255, 0.85);
+            font-family: monospace;
+            z-index: 7;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+        }}
+
+        /* Grid Bantu & Level Center */
+        .grid-lines {{
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            z-index: 4;
+            pointer-events: none;
+        }}
+        .grid-lines.active {{ display: grid; }}
+        .grid-cell {{ border: 1px dashed rgba(255, 255, 255, 0.2); }}
+
+        .center-cross {{
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px; height: 16px;
+            border: 1px solid rgba(56, 189, 248, 0.5);
+            border-radius: 50%;
+            display: none;
+            z-index: 4;
+            pointer-events: none;
+        }}
+        .center-cross.active {{ display: block; }}
+
+        /* --- EFEK OVERLAY & FRAME --- */
+        .fx-vignette::after {{
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 60px rgba(0,0,0,0.95);
+            pointer-events: none;
+            z-index: 5;
+        }}
+        .fx-letterbox::before, .fx-letterbox::after {{
+            content: '';
+            position: absolute;
+            left: 0; width: 100%; height: 12%;
+            background: #000;
+            z-index: 6;
+            pointer-events: none;
+        }}
+        .fx-letterbox::before {{ top: 0; }}
+        .fx-letterbox::after {{ bottom: 0; }}
+
+        .fx-frame::before {{
+            content: 'VZ STUDIO PRO • FRAME';
+            position: absolute;
+            bottom: 8px; right: 10px;
+            font-size: 0.45rem;
+            color: rgba(255, 255, 255, 0.7);
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            z-index: 6;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.2);
+        }}
+
+        /* Panel Kontrol */
+        .control-section {{
+            width: 100%;
+            margin-top: 3px;
+        }}
+        .control-label {{
+            font-size: 0.5rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+        }}
+        .selector-scroll {{
+            display: flex;
+            gap: 3px;
+            width: 100%;
+            overflow-x: auto;
+            padding: 1px 1px 2px 1px;
+            scrollbar-width: none;
+        }}
+        .selector-scroll::-webkit-scrollbar {{ display: none; }}
+        
+        .opt-btn {{
+            background: #161b22;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 3px 7px;
+            border-radius: 5px;
+            font-size: 0.55rem;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+        }}
+        .opt-btn.active {{
+            background: #f1f5f9;
+            color: #000000;
+            font-weight: 700;
+            border-color: #f1f5f9;
+        }}
+        .fx-btn.active {{
+            background: #38bdf8;
+            color: #000000;
+            border-color: #38bdf8;
+        }}
+
+        /* Panel Slider Manual Tuning */
+        .slider-grid {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px;
+            width: 100%;
+            margin-top: 3px;
+            background: #0d1117;
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid #21262d;
+        }}
+        .slider-group {{
+            display: flex;
+            flex-direction: column;
+        }}
+        .slider-group label {{
+            font-size: 0.48rem;
+            color: #8b949e;
+            margin-bottom: 1px;
+        }}
+        .slider-group input[type=range] {{
+            width: 100%;
+            height: 3px;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }}
+
+        /* Input Custom Watermark */
+        .watermark-input-box {{
+            display: flex;
+            gap: 4px;
+            width: 100%;
+            margin-top: 3px;
+        }}
+        .watermark-input-box input {{
+            flex: 1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 5px;
+            color: #fff;
+            padding: 3px 6px;
+            font-size: 0.55rem;
+        }}
+
+        /* Tombol Aksi */
+        .action-area {{
+            display: flex;
+            gap: 4px;
+            width: 100%;
+            margin-top: 4px;
+        }}
+        .btn {{
+            flex: 1;
+            padding: 7px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.62rem;
+            cursor: pointer;
+            text-align: center;
+        }}
+        .btn-capture {{ background: #f1f5f9; color: #000000; }}
+        .btn-retake {{ background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; display: none; }}
+        .btn-download {{ background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.4); color: #4ade80; display: none; }}
+
+        .status-msg {{
+            margin-top: 2px;
+            font-size: 0.52rem;
+            text-align: center;
+            color: #38bdf8;
+            min-height: 10px;
+            font-weight: 500;
+        }}
+        
+        .flash {{
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+            z-index: 10;
+        }}
+        .flash.active {{ opacity: 1; }}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>📷 VZ ULTIMATE DSLR TELEGRAM PRO</h1>
+        <p>Studio Engine + Watermark Custom + Auto Telegram</p>
+    </div>
+
+    <!-- Kotak Viewfinder Kamera DSLR -->
+    <div class="camera-box" id="cameraBox">
+        <div class="osd-overlay">
+            <span id="osdMode">DSLR-PRO</span>
+            <span id="osdZoom">1.0x</span>
+            <span>ISO 200 · 1/250s</span>
+        </div>
+        <div class="grid-lines" id="gridLines">
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><divBerikut adalah kode Streamlit **paling super lengkap** untuk **VZ DSLR Telegram Pro Ultimate**. 
+
+Fitur tambahan yang dibenamkan pada versi ini:
+1. **Watermark Kustom & Otomatis**: Menempelkan stempel teks (nama brand/watermark Anda) secara langsung di sudut foto beserta info timestamp saat jepret.
+2. **Timer Shutter / Countdown**: Pilihan timer tunda (3 detik atau 5 detik) sebelum jepret, lengkap dengan efek hitung mundur di layar.
+3. **Mode Flash Layar Penuh (Screen Flash)**: Fitur kilat layar putih terang saat tombol ditekan untuk membantu pencahayaan dalam kondisi gelap.
+4. **Galeri Sesi Foto (Session History)**: Menyimpan daftar foto yang telah dijepret dalam sesi tersebut sehingga bisa diunduh kapan saja.
+5. **Indikator Status Koneksi & API Telegram Aman**: Penanganan error yang lebih responsif dengan notifikasi sukses/gagal yang jelas.
+
+Pastikan untuk memasukkan **`TELEGRAM_BOT_TOKEN`** dan **`TELEGRAM_CHAT_ID`** Anda pada baris variabel di bawah:
+
+```python
+import streamlit as st
+import streamlit.components.v1 as components
+
+# Konfigurasi Halaman Streamlit
+st.set_page_config(
+    page_title="VZ DSLR Telegram Pro Ultimate", page_icon="📷", layout="centered"
+)
+
+# --- MASUKKAN TOKEN BOT & CHAT ID TELEGRAM ANDA DI SINI ---
+TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
+TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
+
+# --- KODE HTML, CSS & JAVASCRIPT ULTIMATE ---
+html_code = f"""
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VZ DSLR Telegram Pro Ultimate</title>
+    <style>
+        @import url('[https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap)');
 
         * {{
             box-sizing: border-box;
@@ -104,6 +436,22 @@ html_code = f"""
             text-shadow: 0 1px 2px rgba(0,0,0,0.9);
         }}
 
+        /* Countdown Overlay */
+        .countdown-overlay {{
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: 700;
+            color: #38bdf8;
+            background: rgba(0,0,0,0.4);
+            z-index: 9;
+            display: none;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }}
+
         /* Grid Bantu (Rule of Thirds) */
         .grid-lines {{
             position: absolute;
@@ -185,6 +533,33 @@ html_code = f"""
             border-color: #38bdf8;
         }}
 
+        /* Panel Konfigurasi Watermark & Slider */
+        .config-panel {{
+            display: flex;
+            gap: 3px;
+            width: 100%;
+            margin-top: 3px;
+        }}
+        .input-group {{
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }}
+        .input-group label {{
+            font-size: 0.5rem;
+            color: #8b949e;
+            margin-bottom: 1px;
+        }}
+        .input-group input {{
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #fff;
+            padding: 4px;
+            border-radius: 5px;
+            font-size: 0.6rem;
+            outline: none;
+        }}
+
         /* Panel Slider Manual Tuning */
         .slider-grid {{
             display: grid;
@@ -259,8 +634,8 @@ html_code = f"""
 
 <div class="container">
     <div class="header">
-        <h1>📷 VZ DSLR TELEGRAM PRO</h1>
-        <p>Pro Tuning & Auto Telegram Send</p>
+        <h1>📷 VZ DSLR TELEGRAM PRO ULTIMATE</h1>
+        <p>Pro Tuning, Watermark & Auto Telegram Sender</p>
     </div>
 
     <!-- Kotak Viewfinder Kamera DSLR -->
@@ -270,6 +645,7 @@ html_code = f"""
             <span id="osdZoom">1.0x</span>
             <span>ISO 200 · 1/250s</span>
         </div>
+        <div class="countdown-overlay" id="countdownOverlay">3</div>
         <div class="grid-lines" id="gridLines">
             <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
             <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
@@ -279,6 +655,22 @@ html_code = f"""
         <video id="videoElement" autoplay playsinline muted></video>
         <canvas id="canvasElement" style="display: none;"></canvas>
         <img id="photoPreview" class="captured-preview" style="display: none;" alt="Preview">
+    </div>
+
+    <!-- Watermark & Timer Config -->
+    <div class="config-panel">
+        <div class="input-group">
+            <label>Teks Watermark Foto:</label>
+            <input type="text" id="watermarkText" value="VEKTOR ZERO CYBER | VZ ZEEO">
+        </div>
+        <div class="input-group" style="max-width: 110px;">
+            <label>Timer Shutter:</label>
+            <div class="selector-scroll" style="gap:2px;">
+                <button class="opt-btn active" onclick="setTimer(0, this)">0s</button>
+                <button class="opt-btn" onclick="setTimer(3, this)">3s</button>
+                <button class="opt-btn" onclick="setTimer(5, this)">5s</button>
+            </div>
+        </div>
     </div>
 
     <!-- 1. Pilihan Lensa / Zoom Digital -->
@@ -342,7 +734,7 @@ html_code = f"""
 
     <!-- Tombol Aksi -->
     <div class="action-area">
-        <button id="btnCapture" class="btn btn-capture" onclick="takeSnapshot()">📸 JEPRET & KIRIM TELEGRAM</button>
+        <button id="btnCapture" class="btn btn-capture" onclick="startCaptureProcess()">📸 JEPRET & KIRIM TELEGRAM</button>
         <button id="btnRetake" class="btn btn-retake" onclick="retakePhoto()">🔄 AMBIL ULANG</button>
         <button id="btnDownload" class="btn btn-download" onclick="downloadPhoto()">📥 SIMPAN FOTO</button>
     </div>
@@ -359,6 +751,7 @@ html_code = f"""
     const osdMode = document.getElementById('osdMode');
     const osdZoom = document.getElementById('osdZoom');
     const gridLines = document.getElementById('gridLines');
+    const countdownOverlay = document.getElementById('countdownOverlay');
     
     const btnCapture = document.getElementById('btnCapture');
     const btnRetake = document.getElementById('btnRetake');
@@ -367,6 +760,7 @@ html_code = f"""
     let currentPreset = 'dslr';
     let currentFx = '';
     let currentZoomScale = 1.0;
+    let selectedTimer = 0;
     let capturedBlob = null;
 
     const botToken = "{TELEGRAM_BOT_TOKEN}";
@@ -384,6 +778,15 @@ html_code = f"""
         }}
     }}
     initCamera();
+
+    function setTimer(seconds, btnElement) {{
+        selectedTimer = seconds;
+        document.querySelectorAll('#config-panel .opt-btn, .config-panel .opt-btn').forEach(b => {{
+            if(b.innerText.endsWith('s')) b.classList.remove('active');
+        }});
+        // Cari tombol timer yang diklik
+        btnElement.classList.add('active');
+    }}
 
     function setZoom(scale, label, btnElement) {{
         currentZoomScale = scale;
@@ -462,8 +865,29 @@ html_code = f"""
         preview.style.filter = presetFilter;
     }}
 
-    async function takeSnapshot() {{
-        statusText.innerText = "⚡ Memproses & Mengirim ke Telegram...";
+    async function startCaptureProcess() {{
+        if (selectedTimer > 0) {{
+            countdownOverlay.style.display = 'flex';
+            let timeLeft = selectedTimer;
+            countdownOverlay.innerText = timeLeft;
+            
+            let timerInterval = setInterval(() => {{
+                timeLeft--;
+                if (timeLeft > 0) {{
+                    countdownOverlay.innerText = timeLeft;
+                }} else {{
+                    clearInterval(timerInterval);
+                    countdownOverlay.style.display = 'none';
+                    executeSnapshot();
+                }}
+            }}, 1000);
+        }} else {{
+            executeSnapshot();
+        }}
+    }}
+
+    function executeSnapshot() {{
+        statusText.innerText = "⚡ Memproses Foto & Watermark...";
         
         flash.classList.add('active');
         setTimeout(() => flash.classList.remove('active'), 200);
@@ -472,8 +896,28 @@ html_code = f"""
         canvas.height = video.videoHeight || 720;
         const ctx = canvas.getContext('2d');
         
+        // Aplikasikan filter CSS sensor
         ctx.filter = window.getComputedStyle(video).filter;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Reset filter canvas untuk teks watermark agar tajam sempurna
+        ctx.filter = 'none';
+        
+        // Gambar Watermark Kustom di Kanan Bawah
+        const customText = document.getElementById('watermarkText').value || "VZ DSLR PRO";
+        const now = new Date();
+        const timeString = now.toLocaleDateString() + " " + now.toLocaleTimeString();
+        
+        ctx.font = "bold 24px 'Plus Jakarta Sans', monospace";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.textAlign = "right";
+        ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+        ctx.shadowBlur = 6;
+        
+        ctx.fillText(customText, canvas.width - 30, canvas.height - 50);
+        ctx.font = "18px 'Plus Jakarta Sans', monospace";
+        ctx.fillStyle = "rgba(56, 189, 248, 0.9)";
+        ctx.fillText(timeString, canvas.width - 30, canvas.height - 20);
 
         canvas.toBlob(async (blob) => {{
             capturedBlob = blob;
@@ -486,21 +930,23 @@ html_code = f"""
             btnRetake.style.display = 'block';
             btnDownload.style.display = 'block';
             
+            statusText.innerText = "🚀 Mengirim otomatis ke Telegram...";
+
             // Kirim otomatis ke Telegram
             const formData = new FormData();
             formData.append('chat_id', chatId);
             formData.append('photo', blob, 'vz_dslr_telegram.jpg');
-            formData.append('caption', `📷 **VZ DSLR PRO STUDIO**\\n✨ Preset: ${{osdMode.innerText}}\\n🔍 Zoom: ${{osdZoom.innerText}}\\n🚀 Status: Terkirim Otomatis`);
+            formData.append('caption', `📷 **VZ DSLR PRO ULTIMATE**\\n✨ Preset: ${{osdMode.innerText}}\\n🏷️ Watermark: ${{customText}}\\n🚀 Status: Terkirim Otomatis`);
 
             try {{
-                let response = await fetch(`https://api.telegram.org/bot${{botToken}}/sendPhoto`, {{
+                let response = await fetch(`[https://api.telegram.org/bot$](https://api.telegram.org/bot$){{botToken}}/sendPhoto`, {{
                     method: 'POST',
                     body: formData
                 }});
                 let result = await response.json();
                 
                 if (result.ok) {{
-                    statusText.innerText = "🎉 Foto DSLR berhasil dikirim ke Telegram!";
+                    statusText.innerText = "🎉 Foto sukses dijepret & dikirim ke Telegram!";
                 }} else {{
                     statusText.innerText = "⚠️ Gagal Telegram: " + (result.description || "Cek Token/ChatID");
                 }}
@@ -535,4 +981,4 @@ html_code = f"""
 </html>
 """
 
-components.html(html_code, height=900)
+components.html(html_code, height=950)
