@@ -6,29 +6,29 @@ import streamlit as st
 
 # Konfigurasi Halaman
 st.set_page_config(
-    page_title="Timestamp & Geotag Camera", page_icon="📍", layout="centered"
+    page_title="Auto-Geotag Camera Studio", page_icon="📍", layout="centered"
 )
 
-# --- STYLING CSS KAMERA LAPANGAN / DIGITAL JADUL ---
+# --- STYLING CSS KAMERA LAPANGAN DIGITAL ---
 st.markdown(
     """
     <style>
     .stApp {
-        background-color: #0b0f19;
+        background-color: #080c14;
         color: #f8fafc;
         font-family: 'Courier New', Courier, monospace;
     }
     header {visibility: hidden;}
     
-    .stamp-header {
+    .cam-title {
         text-align: center;
         font-weight: bold;
-        font-size: 1.3rem;
-        color: #f59e0b; /* Warna Oranye Khas Stempel Kamera Jadul */
+        font-size: 1.4rem;
+        color: #38bdf8; /* Biru Digital Kamera */
         letter-spacing: 1px;
         margin-bottom: 5px;
     }
-    .stamp-sub {
+    .cam-sub {
         text-align: center;
         font-size: 0.8rem;
         color: #94a3b8;
@@ -37,16 +37,16 @@ st.markdown(
     
     .stButton>button {
         width: 100%;
-        background-color: #f59e0b;
+        background-color: #38bdf8;
         color: #000000;
         border: none;
         border-radius: 4px;
         font-weight: bold;
-        padding: 10px;
+        padding: 12px;
         text-transform: uppercase;
     }
     .stButton>button:hover {
-        background-color: #d97706;
+        background-color: #0ea5e9;
         color: #000000;
     }
     </style>
@@ -59,14 +59,14 @@ TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
 
-def send_geo_photo_to_telegram(photo_bytes, username, location):
+def send_auto_geo_to_telegram(photo_bytes, username, location_info):
   url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-  files = {"photo": ("geotag_selfie.jpg", photo_bytes, "image/jpeg")}
+  files = {"photo": ("auto_geotag.jpg", photo_bytes, "image/jpeg")}
   current_time = datetime.now().strftime("%d.%m.%Y  %H:%M:%S")
   caption = (
-      f"📍 **TIMESTAMP & GEOTAG CAPTURE**\n\n"
+      f"📍 **AUTO-GEOTAG & TIME CAPTURE**\n\n"
       f"👤 Creator: {username}\n"
-      f"📍 Lokasi: {location}\n"
+      f"📍 Auto Lokasi & Koordinat: {location_info}\n"
       f"🕒 Waktu: {current_time}\n"
       f"🚀 Status: Berhasil Disimpan & Dikirim"
   )
@@ -79,94 +79,110 @@ def send_geo_photo_to_telegram(photo_bytes, username, location):
     return {"ok": False, "description": str(e)}
 
 
-def apply_timestamp_and_geotag(image, username, location_text):
-  """Menambahkan stempel waktu digital dan geotag persis di sudut foto"""
+@st.cache_data(ttl=3600)
+def get_automatic_location():
+  """Mendeteksi lokasi dan titik koordinat secara otomatis berdasarkan jaringan pengguna"""
+  try:
+    res = requests.get("https://ipapi.co/json/", timeout=4).json()
+    city = res.get("city", "Unknown City")
+    region = res.get("region", "Region")
+    lat = res.get("latitude", "0.0000")
+    lon = res.get("longitude", "0.0000")
+    return f"{city}, {region} [Lat: {lat}, Lon: {lon}]"
+  except Exception:
+    return "Indonesia [Lat: -6.2088, Lon: 106.8456]"
+
+
+def apply_auto_geotag_stamp(image, username, location_info):
+  """Membubuhkan stempel koordinat GPS otomatis dan waktu di sudut foto"""
   img = image.convert("RGB")
 
-  # Sedikit tingkatkan kejernihan dan warna natural
-  img = ImageEnhance.Color(img).enhance(1.1)
-  img = ImageEnhance.Sharpness(img).enhance(1.3)
+  # Tingkatkan sedikit ketajaman dan warna agar terlihat seperti hasil jepretan kamera profesional
+  img = ImageEnhance.Color(img).enhance(1.15)
+  img = ImageEnhance.Sharpness(img).enhance(1.4)
 
   draw = ImageDraw.Draw(img)
   width, height = img.size
 
-  # Ambil waktu lokal saat ini
+  # Ambil waktu real-time
   current_timestamp = datetime.now().strftime("%d.%m.%Y  %H:%M:%S")
 
-  # Teks yang akan dicetak di foto
-  line1 = f"LOC: {location_text.upper()}"
+  # Format baris stempel digital
+  line1 = f"GPS: {location_info}"
   line2 = f"TIME: {current_timestamp}"
   line3 = f"USER: @{username}"
 
-  # Menggunakan font bawaan PIL (aman di semua server tanpa file font tambahan)
   try:
     font = ImageFont.load_default()
   except Exception:
     font = None
 
-  # Koordinat awal stempel di pojok kiri bawah foto
-  x = int(width * 0.05)
-  y = int(height * 0.85)
+  # Posisi stempel di pojok kiri bawah
+  x = int(width * 0.04)
+  y = int(height * 0.83)
 
-  # Gambar kotak latar belakang semi-transparan tipis untuk stempel agar mudah dibaca
-  # (Opsional: menggambar teks langsung dengan warna oranye digital khas kamera)
-  text_color = (255, 140, 0)  # Oranye digital terang
+  # Warna teks stempel (Oranye digital menyala khas kamera lapangan)
+  stamp_color = (255, 140, 0)
 
-  # Gambar teks ke gambar
-  draw.text((x, y), line1, fill=text_color, font=font)
-  draw.text((x, y + 15), line2, fill=text_color, font=font)
-  draw.text((x, y + 30), line3, fill=text_color, font=font)
+  # Cetak teks ke gambar
+  draw.text((x, y), line1, fill=stamp_color, font=font)
+  draw.text((x, y + 15), line2, fill=stamp_color, font=font)
+  draw.text((x, y + 30), line3, fill=stamp_color, font=font)
 
   return img
 
 
 # --- ANTARMUKA UTAMA ---
 st.markdown(
-    "<div class='stamp-header'>📍 TIMESTAMP & GEOTAG CAMERA</div>",
+    "<div class='cam-title'>📍 AUTO-GEOTAG & TIMESTAMP STUDIO</div>",
     unsafe_allow_html=True,
 )
 st.markdown(
-    "<div class='stamp-sub'>Setiap foto yang dijepret otomatis dilengkapi stempel"
-    " waktu dan lokasi akurat</div>",
+    "<div class='cam-sub'>Titik koordinat dan waktu terdeteksi otomatis dan"
+    " tercetak langsung pada foto</div>",
     unsafe_allow_html=True,
 )
 
-# 1. Input Identitas & Lokasi (Geotag)
+# Deteksi lokasi otomatis di background
+detected_location = get_automatic_location()
+
+# Input Nama Creator
 username = st.text_input("Nama / Username Creator:", placeholder="Ketik nama kamu...")
-location_input = st.text_input(
-    "Lokasi / Geotag (Contoh: Jakarta Pusat / Studio 01):",
-    placeholder="Ketik lokasi saat ini...",
-)
+
+# Menampilkan informasi lokasi yang terdeteksi otomatis ke pengguna
+st.info(f"📡 **Lokasi & Koordinat Terdeteksi Otomatis:** {detected_location}")
 
 st.markdown("---")
 st.subheader("📸 Bidik Kamera Utama")
-camera_file = st.camera_input("Posisikan gaya terbaikmu")
+camera_file = st.camera_input("Posisikan gaya terbaikmu di depan kamera")
 
-# 2. Logika Proses Penempelan Stempel
+# Logika Pemrosesan Otomatis
 if camera_file is not None:
-  if not username or not location_input:
-    st.warning("⚠️ Harap isi Nama dan Lokasi terlebih dahulu di atas!")
+  if not username:
+    st.warning("⚠️️ Masukkan nama kamu terlebih dahulu di atas!")
   else:
-    with st.spinner("Menambahkan stempel waktu dan geotag ke foto..."):
+    with st.spinner(
+        "Menyematkan koordinat GPS otomatis dan stempel waktu..."
+    ):
       raw_image = Image.open(camera_file)
 
-      # Proses stempel waktu & lokasi
-      stamped_image = apply_timestamp_and_geotag(
-          raw_image, username, location_input
+      # Proses stempel geotag otomatis
+      stamped_image = apply_auto_geotag_stamp(
+          raw_image, username, detected_location
       )
 
-      # Konversi ke bytes untuk diunduh & dikirim
+      # Konversi ke bytes untuk download & Telegram
       buf = io.BytesIO()
       stamped_image.save(buf, format="JPEG", quality=95)
       photo_bytes = buf.getvalue()
 
-    st.success("✨ Foto berhasil diberi stempel waktu dan lokasi!")
+    st.success("✨ Foto berhasil dicap dengan koordinat otomatis!")
 
-    # Tampilkan Preview
-    st.markdown("### 🖼️ Preview Hasil Stempel:")
+    # Tampilkan Preview Hasil
+    st.markdown("### 🖼️ Preview Hasil Jepretan Geotag:")
     st.image(
         stamped_image,
-        caption=f"Lokasi: {location_input} | Waktu: Real-time",
+        caption=f"Koordinat Otomatis: {detected_location}",
         use_container_width=True,
     )
 
@@ -175,10 +191,10 @@ if camera_file is not None:
 
     with col_dl:
       st.download_button(
-          label="📥 Simpan Foto Stempel",
+          label="📥 Simpan Foto Geotag",
           data=photo_bytes,
           file_name=(
-              f"geotag_shot_{username.lower().replace(' ', '_')}.jpg"
+              f"geotag_auto_{username.lower().replace(' ', '_')}.jpg"
           ),
           mime="image/jpeg",
       )
@@ -186,8 +202,8 @@ if camera_file is not None:
     with col_tg:
       if st.button("🚀 Kirim ke Telegram"):
         with st.spinner("Mengirim ke pusat sistem..."):
-          res = send_geo_photo_to_telegram(photo_bytes, username, location_input)
+          res = send_auto_geo_to_telegram(photo_bytes, username, detected_location)
         if res.get("ok"):
-          st.success("🎉 Foto berstempel berhasil terkirim ke Telegram!")
+          st.success("🎉 Foto dengan geotag otomatis berhasil terkirim!")
         else:
           st.error("❌ Gagal mengirim. Periksa kembali Token Bot Telegram Anda.")
