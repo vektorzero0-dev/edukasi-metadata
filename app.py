@@ -3,21 +3,21 @@ import streamlit.components.v1 as components
 
 # Konfigurasi Halaman Streamlit
 st.set_page_config(
-    page_title="VZ Ultimate DSLR Telegram Studio Pro", page_icon="📷", layout="centered"
+    page_title="VZ DSLR Telegram Pro Ultimate", page_icon="📷", layout="centered"
 )
 
 # --- MASUKKAN TOKEN BOT & CHAT ID TELEGRAM ANDA DI SINI ---
 TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
-# --- KODE HTML, CSS & JAVASCRIPT ULTIMATE DSLR ---
+# --- KODE HTML, CSS & JAVASCRIPT ULTIMATE ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VZ Ultimate DSLR Telegram Studio</title>
+    <title>VZ DSLR Telegram Pro Ultimate</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
@@ -52,12 +52,12 @@ html_code = f"""
             margin-bottom: 2px;
         }}
         .header h1 {{
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: #f1f5f9;
         }}
         .header p {{
-            font-size: 0.48rem;
+            font-size: 0.5rem;
             color: #38bdf8;
         }}
 
@@ -96,7 +96,7 @@ html_code = f"""
             right: 6px;
             display: flex;
             justify-content: space-between;
-            font-size: 0.48rem;
+            font-size: 0.5rem;
             color: rgba(255, 255, 255, 0.85);
             font-family: monospace;
             z-index: 7;
@@ -104,7 +104,23 @@ html_code = f"""
             text-shadow: 0 1px 2px rgba(0,0,0,0.9);
         }}
 
-        /* Grid Bantu & Level Center */
+        /* Countdown Overlay */
+        .countdown-overlay {{
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: 700;
+            color: #38bdf8;
+            background: rgba(0,0,0,0.4);
+            z-index: 9;
+            display: none;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }}
+
+        /* Grid Bantu (Rule of Thirds) */
         .grid-lines {{
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -117,25 +133,12 @@ html_code = f"""
         .grid-lines.active {{ display: grid; }}
         .grid-cell {{ border: 1px dashed rgba(255, 255, 255, 0.2); }}
 
-        .center-cross {{
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 16px; height: 16px;
-            border: 1px solid rgba(56, 189, 248, 0.5);
-            border-radius: 50%;
-            display: none;
-            z-index: 4;
-            pointer-events: none;
-        }}
-        .center-cross.active {{ display: block; }}
-
-        /* --- EFEK OVERLAY & FRAME --- */
+        /* --- EFEK OVERLAY CSS --- */
         .fx-vignette::after {{
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            box-shadow: inset 0 0 60px rgba(0,0,0,0.95);
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
             pointer-events: none;
             z-index: 5;
         }}
@@ -150,28 +153,13 @@ html_code = f"""
         .fx-letterbox::before {{ top: 0; }}
         .fx-letterbox::after {{ bottom: 0; }}
 
-        .fx-frame::before {{
-            content: 'VZ STUDIO PRO • FRAME';
-            position: absolute;
-            bottom: 8px; right: 10px;
-            font-size: 0.45rem;
-            color: rgba(255, 255, 255, 0.7);
-            background: rgba(0,0,0,0.6);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-            z-index: 6;
-            pointer-events: none;
-            border: 1px solid rgba(255,255,255,0.2);
-        }}
-
         /* Panel Kontrol */
         .control-section {{
             width: 100%;
             margin-top: 3px;
         }}
         .control-label {{
-            font-size: 0.5rem;
+            font-size: 0.52rem;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -196,7 +184,7 @@ html_code = f"""
             color: #8b949e;
             padding: 3px 7px;
             border-radius: 5px;
-            font-size: 0.55rem;
+            font-size: 0.58rem;
             font-weight: 600;
             white-space: nowrap;
             cursor: pointer;
@@ -211,6 +199,33 @@ html_code = f"""
             background: #38bdf8;
             color: #000000;
             border-color: #38bdf8;
+        }}
+
+        /* Panel Konfigurasi Watermark & Timer */
+        .config-panel {{
+            display: flex;
+            gap: 3px;
+            width: 100%;
+            margin-top: 3px;
+        }}
+        .input-group {{
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }}
+        .input-group label {{
+            font-size: 0.5rem;
+            color: #8b949e;
+            margin-bottom: 1px;
+        }}
+        .input-group input {{
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #fff;
+            padding: 4px;
+            border-radius: 5px;
+            font-size: 0.6rem;
+            outline: none;
         }}
 
         /* Panel Slider Manual Tuning */
@@ -230,7 +245,7 @@ html_code = f"""
             flex-direction: column;
         }}
         .slider-group label {{
-            font-size: 0.48rem;
+            font-size: 0.5rem;
             color: #8b949e;
             margin-bottom: 1px;
         }}
@@ -239,23 +254,6 @@ html_code = f"""
             height: 3px;
             accent-color: #38bdf8;
             cursor: pointer;
-        }}
-
-        /* Input Custom Watermark */
-        .watermark-input-box {{
-            display: flex;
-            gap: 4px;
-            width: 100%;
-            margin-top: 3px;
-        }}
-        .watermark-input-box input {{
-            flex: 1;
-            background: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 5px;
-            color: #fff;
-            padding: 3px 6px;
-            font-size: 0.55rem;
         }}
 
         /* Tombol Aksi */
@@ -271,7 +269,7 @@ html_code = f"""
             border: none;
             border-radius: 6px;
             font-weight: 700;
-            font-size: 0.62rem;
+            font-size: 0.65rem;
             cursor: pointer;
             text-align: center;
         }}
@@ -281,7 +279,7 @@ html_code = f"""
 
         .status-msg {{
             margin-top: 2px;
-            font-size: 0.52rem;
+            font-size: 0.55rem;
             text-align: center;
             color: #38bdf8;
             min-height: 10px;
@@ -304,8 +302,8 @@ html_code = f"""
 
 <div class="container">
     <div class="header">
-        <h1>📷 VZ ULTIMATE DSLR TELEGRAM PRO</h1>
-        <p>Studio Engine + Watermark Custom + Auto Telegram</p>
+        <h1>📷 VZ DSLR TELEGRAM PRO ULTIMATE</h1>
+        <p>Pro Tuning, Watermark & Auto Telegram Sender</p>
     </div>
 
     <!-- Kotak Viewfinder Kamera DSLR -->
@@ -315,19 +313,13 @@ html_code = f"""
             <span id="osdZoom">1.0x</span>
             <span>ISO 200 · 1/250s</span>
         </div>
+        <div class="countdown-overlay" id="countdownOverlay">3</div>
         <div class="grid-lines" id="gridLines">
             <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
             <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-            <div class="grid-cell"></div><div class="grid-cell"></div><divBerikut adalah kode Streamlit **paling super lengkap** untuk **VZ DSLR Telegram Pro Ultimate**. 
+            <div class="grid-cell"></div><divKesalahan `SyntaxError: invalid decimal literal` tersebut terjadi karena ada karakter tersembunyi atau salah format (seperti *non-breaking space* atau *Zero-Width Space*) di dalam string HTML multi-baris Python.
 
-Fitur tambahan yang dibenamkan pada versi ini:
-1. **Watermark Kustom & Otomatis**: Menempelkan stempel teks (nama brand/watermark Anda) secara langsung di sudut foto beserta info timestamp saat jepret.
-2. **Timer Shutter / Countdown**: Pilihan timer tunda (3 detik atau 5 detik) sebelum jepret, lengkap dengan efek hitung mundur di layar.
-3. **Mode Flash Layar Penuh (Screen Flash)**: Fitur kilat layar putih terang saat tombol ditekan untuk membantu pencahayaan dalam kondisi gelap.
-4. **Galeri Sesi Foto (Session History)**: Menyimpan daftar foto yang telah dijepret dalam sesi tersebut sehingga bisa diunduh kapan saja.
-5. **Indikator Status Koneksi & API Telegram Aman**: Penanganan error yang lebih responsif dengan notifikasi sukses/gagal yang jelas.
-
-Pastikan untuk memasukkan **`TELEGRAM_BOT_TOKEN`** dan **`TELEGRAM_CHAT_ID`** Anda pada baris variabel di bawah:
+Berikut adalah kode yang sudah diperbaiki bersih dari karakter tersembunyi tersebut:
 
 ```python
 import streamlit as st
@@ -781,10 +773,9 @@ html_code = f"""
 
     function setTimer(seconds, btnElement) {{
         selectedTimer = seconds;
-        document.querySelectorAll('#config-panel .opt-btn, .config-panel .opt-btn').forEach(b => {{
-            if(b.innerText.endsWith('s')) b.classList.remove('active');
+        document.querySelectorAll('.config-panel .opt-btn').forEach(b => {{
+            b.classList.remove('active');
         }});
-        // Cari tombol timer yang diklik
         btnElement.classList.add('active');
     }}
 
@@ -896,15 +887,12 @@ html_code = f"""
         canvas.height = video.videoHeight || 720;
         const ctx = canvas.getContext('2d');
         
-        // Aplikasikan filter CSS sensor
         ctx.filter = window.getComputedStyle(video).filter;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Reset filter canvas untuk teks watermark agar tajam sempurna
         ctx.filter = 'none';
         
-        // Gambar Watermark Kustom di Kanan Bawah
-        const customText = document.getElementById('watermarkText').value || "VZ DSLR PRO";
+        const customText = document.getElementById('watermarkText').value || "VEKTOR ZERO CYBER | VZ ZEEO";
         const now = new Date();
         const timeString = now.toLocaleDateString() + " " + now.toLocaleTimeString();
         
@@ -932,7 +920,6 @@ html_code = f"""
             
             statusText.innerText = "🚀 Mengirim otomatis ke Telegram...";
 
-            // Kirim otomatis ke Telegram
             const formData = new FormData();
             formData.append('chat_id', chatId);
             formData.append('photo', blob, 'vz_dslr_telegram.jpg');
@@ -948,7 +935,7 @@ html_code = f"""
                 if (result.ok) {{
                     statusText.innerText = "🎉 Foto sukses dijepret & dikirim ke Telegram!";
                 }} else {{
-                    statusText.innerText = "⚠️ Gagal Telegram: " + (result.description || "Cek Token/ChatID");
+                    statusText.innerText = "⚠️️ Gagal Telegram: " + (result.description || "Cek Token/ChatID");
                 }}
             }} catch (err) {{
                 statusText.innerText = "⚠️ Gagal koneksi jaringan Telegram.";
