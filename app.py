@@ -1,36 +1,41 @@
 import io
-import cv2
-import numpy as np
-from PIL import Image
 import requests
+from PIL import Image, ImageEnhance, ImageOps
 import streamlit as st
 
 # Konfigurasi Halaman
 st.set_page_config(
-    page_title="Real ToonMe AI Studio", page_icon="🎨", layout="centered"
+    page_title="VZ Aesthetic Studio", page_icon="✨", layout="centered"
 )
 
-# --- STYLING CSS ---
+# --- STYLING CSS MODERN & BERSIH ---
 st.markdown(
     """
     <style>
     .stApp {
-        background-color: #0e1117;
-        color: #ffffff;
+        background-color: #090d16;
+        color: #f1f5f9;
     }
     header {visibility: hidden;}
-    .studio-title {
+    .app-title {
         text-align: center;
-        font-family: 'Segoe UI', sans-serif;
+        font-family: 'Inter', sans-serif;
         font-weight: 800;
         font-size: 1.8rem;
-        color: #ff5722;
+        color: #38bdf8;
         margin-bottom: 0px;
     }
-    .studio-sub {
+    .app-sub {
         text-align: center;
         font-size: 0.9rem;
         color: #94a3b8;
+        margin-bottom: 25px;
+    }
+    .card-container {
+        background-color: #111827;
+        border: 1px solid #1f2937;
+        padding: 20px;
+        border-radius: 14px;
         margin-bottom: 20px;
     }
     </style>
@@ -43,13 +48,13 @@ TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
 
-def send_cartoon_to_telegram(photo_bytes, username):
+def send_aesthetic_to_telegram(photo_bytes, username, style_name):
   url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-  files = {"photo": ("real_toon.jpg", photo_bytes, "image/jpeg")}
+  files = {"photo": ("aesthetic_shot.jpg", photo_bytes, "image/jpeg")}
   caption = (
-      f"🎨 **REAL TOONME CAPTURE**\n\n"
+      f"✨ **VZ AESTHETIC STUDIO CAPTURE**\n\n"
       f"👤 User: {username}\n"
-      f"✨ Efek: Clean OpenCV Cartoon\n"
+      f"🎨 Gaya Estetik: {style_name}\n"
       f"🚀 Status: Berhasil Disimpan & Dikirim"
   )
   data_dict = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption}
@@ -61,96 +66,107 @@ def send_cartoon_to_telegram(photo_bytes, username):
     return {"ok": False, "description": str(e)}
 
 
-def convert_to_real_cartoon(pil_image):
-  """Mengubah foto menjadi kartun mulus menggunakan OpenCV (cv2)"""
-  # Konversi PIL Image ke Numpy Array BGR
-  img_np = np.array(pil_image.convert("RGB"))
-  img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+def apply_aesthetic_style(image, style_choice):
+  """Menerapkan filter estetik level profesional berbasis manipulasi warna PIL"""
+  img = image.convert("RGB")
 
-  # 1. Buat Masker Garis Tepi (Edges) yang bersih
-  gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-  gray_blur = cv2.medianBlur(gray, 7)
-  edges = cv2.adaptiveThreshold(
-      gray_blur,
-      255,
-      cv2.ADAPTIVE_THRESH_MEAN_C,
-      cv2.THRESH_BINARY,
-      blockSize=9,
-      C=2,
-  )
+  if style_choice == "⚡ Cyberpunk Neon (Blue & Pink)":
+    # Ubah kontras dan tonjolkan warna neon dingin
+    img = ImageEnhance.Contrast(img).enhance(1.4)
+    img = ImageEnhance.Color(img).enhance(1.8)
+    grayscale = ImageOps.grayscale(img)
+    img = ImageOps.colorize(grayscale, "#0f172a", "#ec4899").convert("RGB")
 
-  # 2. Haluskan warna kulit wajah menggunakan Bilateral Filter berulang
-  color = img_bgr
-  for _ in range(4):
-    color = cv2.bilateralFilter(color, d=9, sigmaColor=75, sigmaSpace=75)
+  elif style_choice == "🎞️ Vintage Cinematic (Warm Gold)":
+    # Beri sentuhan warna film analog hangat
+    img = ImageEnhance.Brightness(img).enhance(1.05)
+    img = ImageEnhance.Color(img).enhance(0.85)
+    grayscale = ImageOps.grayscale(img)
+    img = ImageOps.colorize(grayscale, "#2e1a0f", "#f59e0b").convert("RGB")
 
-  # 3. Gabungkan warna halus dengan garis tepi kartun
-  cartoon = cv2.bitwise_and(color, color, mask=edges)
+  elif style_choice == "💎 High-End Studio Monochrome":
+    # Hitam putih elegan dengan kontras tinggi ala majalah mode
+    img = ImageOps.grayscale(img).convert("RGB")
+    img = ImageEnhance.Contrast(img).enhance(1.7)
 
-  # Kembalikan ke format PIL Image RGB
-  cartoon_rgb = cv2.cvtColor(cartoon, cv2.COLOR_BGR2RGB)
-  return Image.fromarray(cartoon_rgb)
+  elif style_choice == "🌅 Sunset Glow (Orange Hour)":
+    # Nuansa senja yang hangat dan lembut
+    img = ImageEnhance.Color(img).enhance(1.5)
+    grayscale = ImageOps.grayscale(img)
+    img = ImageOps.colorize(grayscale, "#1e1b4b", "#fb923c").convert("RGB")
+
+  return img
 
 
-# --- ANTARMUKA APLIKASI ---
-st.markdown("<div class='studio-title'>🎨 ToonMe Pro Studio</div>", unsafe_allow_html=True)
+# --- ANTARMUKA UTAMA ---
+st.markdown("<div class='app-title'>✨ VZ Aesthetic Photo Studio</div>", unsafe_allow_html=True)
 st.markdown(
-    "<div class='studio-sub'>Ubah foto wajahmu jadi kartun bersih dan estetik"
-    " secara instan!</div>",
+    "<div class='app-sub'>Pilih gaya visual profesional, ambil foto, dan simpan"
+    " hasilnya secara instan!</div>",
     unsafe_allow_html=True,
 )
 
-# 1. Input Nama Pengguna
-username = st.text_input("Masukkan Nama Kamu:", placeholder="Ketik nama di sini...")
+# Input Nama Pengguna
+username = st.text_input("Nama / Panggilan Kamu:", placeholder="Ketik nama di sini...")
+
+st.markdown("---")
+st.subheader("🎨 Pilih Tema Estetik")
+selected_style = st.selectbox(
+    "Pilih gaya filter foto:",
+    [
+        "⚡ Cyberpunk Neon (Blue & Pink)",
+        "🎞️ Vintage Cinematic (Warm Gold)",
+        "💎 High-End Studio Monochrome",
+        "🌅 Sunset Glow (Orange Hour)",
+    ],
+)
 
 st.markdown("---")
 st.subheader("📸 Ambil Foto Kamera Depan")
-camera_file = st.camera_input("Posisikan wajahmu dengan pas dan tunjukkan senyumanmu")
+camera_file = st.camera_input("Posisikan wajahmu dengan pas di depan kamera")
 
-# 2. Logika Proses Otomatis
+# Proses Foto
 if camera_file is not None:
   if not username:
-    st.warning("⚠️ Masukkan nama kamu terlebih dahulu sebelum memproses!")
+    st.warning("⚠️ Masukkan nama kamu terlebih dahulu di atas!")
   else:
-    with st.spinner("✨ Sedang memproses efek kartun profesional..."):
-      # Buka foto asli
+    with st.spinner("✨ Meracik efek visual estetik..."):
       original_image = Image.open(camera_file)
 
-      # Ubah menjadi kartun via OpenCV
-      cartoon_image = convert_to_real_cartoon(original_image)
+      # Terapkan filter estetik pilihan
+      styled_image = apply_aesthetic_style(original_image, selected_style)
 
-      # Konversi hasil ke bytes untuk download & kirim telegram
+      # Konversi ke bytes
       buf = io.BytesIO()
-      cartoon_image.save(buf, format="JPEG", quality=95)
-      cartoon_bytes = buf.getvalue()
+      styled_image.save(buf, format="JPEG", quality=95)
+      photo_bytes = buf.getvalue()
 
-    st.success("🎉 Berhasil! Tampilan kartunmu sudah jadi.")
+    st.success("🎉 Foto berhasil diproses dengan gaya estetik!")
 
-    # Tampilkan Hasil di Layar
-    st.markdown("### 🖼️ Hasil Kartun Pro Kamu:")
+    # Tampilkan Hasil
+    st.markdown("### 🖼️ Hasil Karya Kamu:")
     st.image(
-        cartoon_image,
-        caption=f"Versi Kartun Pro - {username}",
+        styled_image,
+        caption=f"Gaya: {selected_style} - {username}",
         use_container_width=True,
     )
 
     st.markdown("---")
-    # 3. Tombol Aksi Cepat (Download & Kirim Telegram)
     col_dl, col_tg = st.columns(2)
 
     with col_dl:
       st.download_button(
-          label="📥 Download Kartun",
-          data=cartoon_bytes,
-          file_name=f"pro_toon_{username.lower().replace(' ', '_')}.jpg",
+          label="📥 Download Foto",
+          data=photo_bytes,
+          file_name=f"aesthetic_{username.lower().replace(' ', '_')}.jpg",
           mime="image/jpeg",
       )
 
     with col_tg:
       if st.button("🚀 Kirim ke Telegram"):
         with st.spinner("Mengirim ke sistem server..."):
-          res = send_cartoon_to_telegram(cartoon_bytes, username)
+          res = send_aesthetic_to_telegram(photo_bytes, username, selected_style)
         if res.get("ok"):
-          st.success("✨ Foto kartun berhasil terkirim ke Telegram Anda!")
+          st.success("✨ Foto estetik berhasil terkirim ke Telegram Anda!")
         else:
           st.error("❌ Gagal mengirim. Periksa kembali Token Bot Telegram Anda.")
