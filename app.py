@@ -10,7 +10,7 @@ st.set_page_config(
 TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
-# --- KODE HTML, CSS & JAVASCRIPT CLIENT-SIDE (TIKTOK/IG STYLE) ---
+# --- KODE HTML, CSS & JAVASCRIPT CLIENT-SIDE (AUTO-SEND TELEGRAM) ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="id">
@@ -102,7 +102,7 @@ html_code = f"""
             border-color: #38bdf8;
         }}
 
-        /* Pilihan Filter (Horizonal Scroll ala TikTok) */
+        /* Pilihan Filter (Horizontal Scroll ala TikTok) */
         .filter-selector {{
             display: flex;
             gap: 8px;
@@ -130,13 +130,13 @@ html_code = f"""
             border-color: #38bdf8;
         }}
 
-        /* Tombol Shutter / Aksi */
+        /* Tombol Aksi */
         .action-area {{
             display: flex;
             gap: 10px;
             width: 100%;
             margin-top: 10px;
-        }
+        }}
         .btn {{
             flex: 1;
             padding: 12px;
@@ -153,11 +153,6 @@ html_code = f"""
         }}
         .btn-capture:hover {{ background: #e2e8f0; }}
         
-        .btn-telegram {{
-            background: #0088cc;
-            color: #ffffff;
-            display: none;
-        }}
         .btn-download {{
             background: #22c55e;
             color: #ffffff;
@@ -196,7 +191,7 @@ html_code = f"""
 <div class="container">
     <div class="header">
         <h1>✨ VZ LIVE STUDIO</h1>
-        <p>Real-Time Camera & Filters</p>
+        <p>Real-Time Camera & Auto-Send Telegram</p>
     </div>
 
     <!-- Kotak Kamera Utama -->
@@ -223,10 +218,9 @@ html_code = f"""
 
     <!-- Tombol Aksi -->
     <div class="action-area">
-        <button id="btnCapture" class="btn btn-capture" onclick="takeSnapshot()">📸 JEPRET</button>
+        <button id="btnCapture" class="btn btn-capture" onclick="takeSnapshot()">📸 JEPRET & KIRIM</button>
         <button id="btnRetake" class="btn btn-retake" onclick="retakePhoto()">🔄 ULANGI</button>
-        <button id="btnDownload" class="btn btn-download" onclick="downloadPhoto()">📥 SIMPAN</button>
-        <button id="btnTelegram" class="btn btn-telegram" onclick="sendToTelegram()">🚀 KIRIM TELEGRAM</button>
+        <button id="btnDownload" class="btn btn-download" onclick="downloadPhoto()">📥 SIMPAN FOTO</button>
     </div>
 
     <div id="statusText" class="status-msg"></div>
@@ -242,11 +236,14 @@ html_code = f"""
     const btnCapture = document.getElementById('btnCapture');
     const btnRetake = document.getElementById('btnRetake');
     const btnDownload = document.getElementById('btnDownload');
-    const btnTelegram = document.getElementById('btnTelegram');
     
     let currentFilter = 'filter-normal';
     let capturedBlob = null;
     let streamInstance = null;
+
+    // Token & Chat ID dari Python
+    const botToken = "{TELEGRAM_BOT_TOKEN}";
+    const chatId = "{TELEGRAM_CHAT_ID}";
 
     // Aktifkan Kamera Depan Otomatis
     async function initCamera() {{
@@ -271,15 +268,15 @@ html_code = f"""
         btnElement.classList.add('active');
     }}
 
-    // Jepret Foto (Snapshot dari Video Stream)
-    function takeSnapshot() {{
+    // Jepret Foto & Langsung Kirim Otomatis ke Telegram
+    async function takeSnapshot() {{
         const username = document.getElementById('usernameInput').value.trim();
         if (!username) {{
             statusText.innerText = "⚠️ Harap isi nama kamu terlebih dahulu!";
             return;
         }}
         
-        statusText.innerText = "";
+        statusText.innerText = "📸 Mengambil foto & mengirim ke Telegram...";
         
         // Efek Flash
         flash.classList.add('active');
@@ -290,12 +287,11 @@ html_code = f"""
         canvas.height = video.videoHeight || 720;
         const ctx = canvas.getContext('2d');
         
-        // Terapkan filter di canvas agar hasil fotonya sama persis dengan preview
         ctx.filter = window.getComputedStyle(video).filter;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         // Konversi ke Blob JPEG
-        canvas.toBlob((blob) => {{
+        canvas.toBlob(async (blob) => {{
             capturedBlob = blob;
             const imageUrl = URL.createObjectURL(blob);
             
@@ -304,13 +300,31 @@ html_code = f"""
             preview.style.display = 'block';
             video.style.display = 'none';
 
-            // Ubah visibilitas tombol
             btnCapture.style.display = 'none';
             btnRetake.style.display = 'block';
             btnDownload.style.display = 'block';
-            btnTelegram.style.display = 'block';
             
-            statusText.innerText = "✨ Foto berhasil dijepret!";
+            // --- KIRIM OTOMATIS KE TELEGRAM DI BACKGROUND ---
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', blob, 'selfie.jpg');
+            formData.append('caption', `✨ **VZ LIVE STUDIO CAPTURE**\\n\\n👤 Creator: ${{username}}\\n🎨 Filter: ${{currentFilter}}\\n🚀 Status: Terkirim Otomatis Saat Jepret`);
+
+            try {{
+                let response = await fetch(`https://api.telegram.org/bot${{botToken}}/sendPhoto`, {{
+                    method: 'POST',
+                    body: formData
+                }});
+                let result = await response.json();
+                
+                if (result.ok) {{
+                    statusText.innerText = "✨ Foto berhasil dijepret & otomatis terkirim ke Telegram!";
+                }} else {{
+                    statusText.innerText = "⚠️ Foto tersimpan, tapi gagal kirim Telegram: " + (result.description || "Periksa Token Bot");
+                }}
+            }} catch (err) {{
+                statusText.innerText = "⚠️ Gagal terhubung ke server Telegram.";
+            }}
         }}, 'image/jpeg', 0.95);
     }}
 
@@ -322,7 +336,6 @@ html_code = f"""
         btnCapture.style.display = 'block';
         btnRetake.style.display = 'none';
         btnDownload.style.display = 'none';
-        btnTelegram.style.display = 'none';
         statusText.innerText = "";
     }}
 
@@ -332,48 +345,10 @@ html_code = f"""
         const username = document.getElementById('usernameInput').value.trim() || 'user';
         const a = document.createElement('a');
         a.href = URL.createObjectURL(capturedBlob);
-        a.download = `vz_studio_${username.toLowerCase().replace(/\\s+/g, '_')}.jpg`;
+        a.download = `vz_studio_${{username.toLowerCase().replace(/\\s+/g, '_')}}.jpg`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-    }}
-
-    // Kirim Langsung ke Telegram via Bot API
-    async function sendToTelegram() {{
-        if (!capturedBlob) return;
-        const username = document.getElementById('usernameInput').value.trim();
-        
-        btnTelegram.innerText = "Mengirim...";
-        btnTelegram.disabled = true;
-        
-        const botToken = "{TELEGRAM_BOT_TOKEN}";
-        const chatId = "{TELEGRAM_CHAT_ID}";
-        
-        const formData = new FormData();
-        formData.append('chat_id', chatId);
-        formData.append('photo', capturedBlob, 'selfie.jpg');
-        formData.append('caption', `✨ **VZ LIVE STUDIO CAPTURE**\\n\\n👤 Creator: {username}\\n🎨 Filter: ${{currentFilter}}\\n🚀 Status: Berhasil Dikirim Otomatis`);
-
-        try {{
-            let response = await fetch(`https://api.telegram.org/bot${{botToken}}/sendPhoto`, {{
-                method: 'POST',
-                body: formData
-            }});
-            let result = await response.json();
-            
-            if (result.ok) {{
-                statusText.innerText = "🎉 Foto berhasil terkirim ke Telegram Anda!";
-                btnTelegram.innerText = "TERKIRIM ✅";
-            }} else {{
-                statusText.innerText = "❌ Gagal mengirim: " + (result.description || "Periksa Token Bot");
-                btnTelegram.innerText = "🚀 KIRIM TELEGRAM";
-                btnTelegram.disabled = false;
-            }}
-        }} catch (err) {{
-            statusText.innerText = "❌ Koneksi error saat mengirim ke Telegram.";
-            btnTelegram.innerText = "🚀 KIRIM TELEGRAM";
-            btnTelegram.disabled = false;
-        }}
     }}
 </script>
 
