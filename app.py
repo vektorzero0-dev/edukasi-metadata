@@ -5,27 +5,31 @@ import streamlit as st
 
 # Konfigurasi Halaman
 st.set_page_config(
-    page_title="VZ Modern Selfie Booth", page_icon="✨", layout="centered"
+    page_title="VZ TikTok-Style Selfie Studio", page_icon="📸", layout="centered"
 )
 
-# --- STYLING CSS ESTETIK MODERN ---
+# --- STYLING CSS MODERN & ESTETIK ---
 st.markdown(
     """
     <style>
     .stApp {
-        background-color: #0f172a;
+        background-color: #0b0f19;
         color: #f8fafc;
     }
     h1, h2, h3 {
         color: #38bdf8 !important;
         font-family: 'Inter', sans-serif;
     }
-    .booth-card {
-        background-color: #1e293b;
-        border: 1px solid #334155;
+    .studio-card {
+        background-color: #111827;
+        border: 1px solid #1f2937;
         padding: 20px;
         border-radius: 12px;
         margin-bottom: 20px;
+    }
+    .filter-desc {
+        font-size: 0.85rem;
+        color: #94a3b8;
     }
     </style>
 """,
@@ -37,14 +41,14 @@ TELEGRAM_BOT_TOKEN = "MASUKKAN_TOKEN_BOT_ANDA_DI_SINI"
 TELEGRAM_CHAT_ID = "MASUKKAN_CHAT_ID_ANDA_DI_SINI"
 
 
-def send_styled_photo_to_telegram(photo_bytes, user_name, filter_used):
+def send_photo_to_telegram(photo_bytes, user_name, filter_used):
   url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-  files = {"photo": ("vz_selfie.jpg", photo_bytes, "image/jpeg")}
+  files = {"photo": ("vz_studio_edit.jpg", photo_bytes, "image/jpeg")}
   caption = (
-      f"✨ **NEW SELVIE BOOTH CAPTURE**\n\n"
+      f"✨ **VZ STUDIO CAPTURE**\n\n"
       f"👤 Nama: {user_name}\n"
-      f"🎨 Efek/Filter: {filter_used}\n"
-      f"📸 Status: Berhasil Dikirim ke Koleksi Admin"
+      f"🎨 Filter Pilihan: {filter_used}\n"
+      f"📥 Status: Berhasil Disimpan & Dikirim"
   )
   data_dict = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption}
 
@@ -56,93 +60,125 @@ def send_styled_photo_to_telegram(photo_bytes, user_name, filter_used):
 
 
 def apply_filter(image, filter_name):
-  """Fungsi untuk memproses efek filter foto menggunakan PIL"""
+  """Fungsi pemrosesan efek filter foto ala TikTok/Instagram"""
   img = image.convert("RGB")
 
-  if filter_name == "Monochrome (Hitam Putih Klasik)":
-    img = ImageOps.grayscale(img).convert("RGB")
-  elif filter_name == "Vintage Sepia":
-    # Konversi ke sepia sederhana
-    grayscale = ImageOps.grayscale(img)
-    img = ImageOps.colorize(grayscale, "#704214", "#FFC0CB").convert("RGB")
-  elif filter_name == "Cinematic High Contrast":
+  if filter_name == "🎬 Cinematic Dark (Sinematik Keren)":
     enhancer = ImageEnhance.Contrast(img)
-    img = enhancer.enhance(1.8)
-  elif filter_name == "Cyber Neon Glow":
+    img = enhancer.enhance(1.6)
+    # Beri sedikit efek redup/cool
+    img = ImageOps.colorize(
+        ImageOps.grayscale(img), "#111827", "#38bdf8"
+    ).convert("RGB")
+  elif filter_name == "🌸 Soft Glow (Korea Style)":
+    enhancer = ImageEnhance.Brightness(img)
+    img = enhancer.enhance(1.15)
+    color_enhancer = ImageEnhance.Color(img)
+    img = color_enhancer.enhance(0.85)  # Sedikit soft pastel
+  elif filter_name == "🖤 Monochrome (Hitam Putih Elegan)":
+    img = ImageOps.grayscale(img).convert("RGB")
+  elif filter_name == "📼 Vintage Retro (90an)":
+    grayscale = ImageOps.grayscale(img)
+    img = ImageOps.colorize(grayscale, "#3b2300", "#ffd700").convert("RGB")
+  elif filter_name == "🔥 Cyber Neon (Pop Warna)":
     enhancer = ImageEnhance.Color(img)
-    img = enhancer.enhance(2.0)  # Tingkatkan saturasi warna
-  # Default: Normal / Original
+    img = enhancer.enhance(2.2)
+  # Default: Normal
 
   return img
 
 
 # --- ANTARMUKA APLIKASI ---
-st.title("✨ VZ Modern Selfie Booth")
+st.title("📸 VZ Creator Selfie Studio")
 st.markdown(
     """
-<div class='booth-card'>
-<b>Selamat datang di Studio Foto Instan!</b> Pilih gaya efek favoritmu, ambil pose terbaikmu di depan kamera, dan hasil fotomu akan langsung tersimpan secara instan.
+<div class='studio-card'>
+<b>Selamat datang di Studio Kreatif!</b> Ambil foto terbaikmu, pilih efek filter ala TikTok, bandingkan hasilnya, unduh langsung ke perangkatmu, dan bagikan secara otomatis.
 </div>
 """,
     unsafe_allow_html=True,
 )
 
-# Input data pengguna
-user_name = st.text_input("Nama Anda / Panggilan:")
-
-# Pilihan Filter / Efek Kamera
-st.subheader("🎨 Pilih Efek & Filter Keren")
-selected_filter = st.selectbox(
-    "Pilih gaya filter foto:",
-    [
-        "Normal (Original)",
-        "Monochrome (Hitam Putih Klasik)",
-        "Vintage Sepia",
-        "Cinematic High Contrast",
-        "Cyber Neon Glow",
-    ],
-)
+# Input Nama Pengguna
+user_name = st.text_input("Masukkan Nama / Panggilan Kamu:")
 
 st.markdown("---")
-st.subheader("📷 Ambil Foto")
-camera_image = st.camera_input("Posisikan wajahmu dengan pas di dalam frame")
+st.subheader("📷 Ambil Foto Kamera Depan")
+camera_image = st.camera_input("Posisikan wajahmu di dalam frame kamera")
 
 if camera_image is not None:
-  if st.button("✨ Proses & Kirim Foto"):
-    if not user_name:
-      st.warning("⚠️ Mohon isi nama kamu terlebih dahulu sebelum menjepret!")
-    else:
-      with st.spinner("Memproses efek filter dan mengirim ke server..."):
-        # Buka gambar asli dari kamera
-        original_img = Image.open(camera_image)
+  if not user_name:
+    st.warning("⚠️ Mohon isi nama kamu terlebih dahulu sebelum mengedit foto!")
+  else:
+    # Buka gambar asli
+    original_img = Image.open(camera_image)
 
-        # Terapkan filter yang dipilih
-        processed_img = apply_filter(original_img, selected_filter)
+    st.markdown("---")
+    st.subheader("✨ Pilih Efek & Filter (Gaya TikTok)")
 
-        # Ubah gambar hasil filter kembali ke format bytes untuk dikirim
-        buf = io.BytesIO()
-        processed_img.save(buf, format="JPEG", quality=95)
-        byte_im = buf.getvalue()
+    # Pilihan Filter Interaktif
+    filter_choice = st.radio(
+        "Pilih salah satu filter di bawah ini:",
+        [
+            "✨ Normal (Original)",
+            "🎬 Cinematic Dark (Sinematik Keren)",
+            "🌸 Soft Glow (Korea Style)",
+            "🖤 Monochrome (Hitam Putih Elegan)",
+            "📼 Vintage Retro (90an)",
+            "🔥 Cyber Neon (Pop Warna)",
+        ],
+        horizontal=False,
+    )
 
-        # Kirim foto berfilter ke Telegram Anda
-        telegram_res = send_styled_photo_to_telegram(
-            byte_im, user_name, selected_filter
-        )
+    # Bersihkan nama filter dari emoji untuk teks telegram
+    clean_filter_name = filter_choice.split(" ", 1)[1]
 
-      st.success("🎉 Yeay! Foto berhasil diproses dan dikirim.")
+    # Proses gambar dengan filter yang dipilih
+    processed_img = apply_filter(original_img, clean_filter_name)
 
-      # Tampilkan hasil foto yang sudah diberi efek ke layar pengguna
-      st.markdown("### 🖼️ Hasil Foto Kamu:")
+    st.markdown("---")
+    st.subheader("🔍 Perbandingan Sebelum & Sesudah (Before / After)")
+
+    # Tampilkan perbandingan Before & After dalam 2 Kolom
+    col1, col2 = st.columns(2)
+    with col1:
+      st.image(
+          original_img, caption="Sebelum (Original)", use_container_width=True
+      )
+    with col2:
       st.image(
           processed_img,
-          caption=f"Gaya: {selected_filter}",
+          caption=f"Sesudah ({clean_filter_name})",
           use_container_width=True,
       )
 
-      if telegram_res.get("ok"):
-        st.caption(
-            "🔒 Salinan foto kerenmu telah otomatis terkirim ke galeri pusat"
-            " administrator."
+    # Konversi hasil edit ke bytes untuk tombol Download & Telegram
+    buf = io.BytesIO()
+    processed_img.save(buf, format="JPEG", quality=95)
+    byte_im = buf.getvalue()
+
+    st.markdown("---")
+    st.subheader("💾 Simpan & Kirim Hasil Karya")
+
+    # Tombol Download Langsung (Fitur Baru)
+    st.download_button(
+        label="📥 Download Foto Berfilter Ini",
+        data=byte_im,
+        file_name=f"vz_studio_{clean_filter_name.lower().replace(' ', '_')}.jpg",
+        mime="image/jpeg",
+    )
+
+    # Tombol Kirim ke Telegram Anda
+    if st.button("🚀 Kirim Hasil Foto ke Sistem Telegram"):
+      with st.spinner("Mengirim foto ke pusat kendali..."):
+        telegram_res = send_photo_to_telegram(
+            byte_im, user_name, clean_filter_name
         )
+
+      if telegram_res.get("ok"):
+        st.success("🎉 Berhasil! Foto kamu telah dikirim ke pusat sistem.")
       else:
-        st.error("Gagal mengirim foto ke Telegram. Periksa kembali Token Bot.")
+        st.error(
+            "❌ Gagal mengirim ke Telegram. Periksa kembali Token Bot & Chat ID"
+            " Anda."
+        )
